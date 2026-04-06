@@ -1,15 +1,23 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowLeft, Calendar, MessageSquare } from "lucide-react"
-import { mockVisitas } from "@/lib/mock-data"
+import { getVisitas } from "@/lib/services/visitas.service"
+import type { Visita } from "@/lib/types"
 
 interface HistorialVisitasProps {
   onBack?: () => void
 }
 
 export function HistorialVisitas({ onBack }: HistorialVisitasProps) {
+  const [visitas, setVisitas] = useState<Visita[]>([])
+
+  useEffect(() => {
+    getVisitas().then(setVisitas)
+  }, [])
+
   return (
     <div className="flex flex-col min-h-full">
       {/* Header */}
@@ -29,12 +37,12 @@ export function HistorialVisitas({ onBack }: HistorialVisitasProps) {
 
       {/* Visit List */}
       <div className="flex-1 p-4 space-y-3">
-        {mockVisitas.length === 0 ? (
+        {visitas.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             No hay visitas registradas
           </div>
         ) : (
-          mockVisitas.map((visita) => (
+          visitas.map((visita) => (
             <Card key={visita.id}>
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">

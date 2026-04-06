@@ -1,6 +1,5 @@
 "use client"
 
-import { useRef, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -20,7 +19,7 @@ import {
   Line,
   Legend,
 } from "recharts"
-import { mockProductosPorVencer, mockClientes } from "@/lib/mock-data"
+import { useDashboardSupervisor } from "../hooks/useDashboardSupervisor"
 
 interface DashboardSupervisorProps {
   onNavigate: (page: string) => void
@@ -53,104 +52,14 @@ const tendenciaVisitas = [
 ]
 
 export function DashboardSupervisor({ onNavigate }: DashboardSupervisorProps) {
-  const chartRef1 = useRef<HTMLDivElement>(null)
-  const chartRef2 = useRef<HTMLDivElement>(null)
-  const chartRef3 = useRef<HTMLDivElement>(null)
-
-  const summaryData = {
-    clientesHoy: 8,
-    productosEstancados: 2,
-    totalInventario: 156,
-    visitasSemana: 61,
-    cambioVisitas: 27,
-  }
-
-  // Semaforo data
-  const vencimientosPorCliente = mockClientes
-    .filter((c) => c.activo)
-    .map((cliente) => {
-      const productos = mockProductosPorVencer.filter((p) => p.clienteId === cliente.id)
-      const criticos = productos.filter((p) => p.estado === "critico").length
-      const alertas = productos.filter((p) => p.estado === "alerta").length
-      const proximos = productos.filter((p) => p.estado === "proximo").length
-      return {
-        ...cliente,
-        criticos,
-        alertas,
-        proximos,
-        total: criticos + alertas + proximos,
-      }
-    })
-    .filter((c) => c.total > 0)
-    .sort((a, b) => b.criticos - a.criticos || b.alertas - a.alertas)
-
-  const downloadChart = useCallback(async (chartRef: React.RefObject<HTMLDivElement | null>, fileName: string) => {
-    if (!chartRef.current) return
-
-    try {
-      const svg = chartRef.current.querySelector("svg")
-      if (!svg) return
-
-      const clonedSvg = svg.cloneNode(true) as SVGElement
-      const svgStyles = window.getComputedStyle(svg)
-      clonedSvg.setAttribute("style", `background-color: white; font-family: ${svgStyles.fontFamily}`)
-      
-      const bbox = svg.getBoundingClientRect()
-      clonedSvg.setAttribute("width", String(bbox.width))
-      clonedSvg.setAttribute("height", String(bbox.height))
-
-      const cssVarElements = clonedSvg.querySelectorAll("[fill], [stroke]")
-      cssVarElements.forEach((el) => {
-        const fill = el.getAttribute("fill")
-        const stroke = el.getAttribute("stroke")
-        
-        if (fill && fill.includes("var(--")) {
-          const computedColor = getComputedStyle(document.documentElement).getPropertyValue(
-            fill.replace("var(", "").replace(")", "").trim()
-          )
-          if (computedColor) el.setAttribute("fill", computedColor.trim())
-        }
-        if (stroke && stroke.includes("var(--")) {
-          const computedColor = getComputedStyle(document.documentElement).getPropertyValue(
-            stroke.replace("var(", "").replace(")", "").trim()
-          )
-          if (computedColor) el.setAttribute("stroke", computedColor.trim())
-        }
-      })
-
-      const serializer = new XMLSerializer()
-      const svgString = serializer.serializeToString(clonedSvg)
-      const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" })
-      const svgUrl = URL.createObjectURL(svgBlob)
-
-      const canvas = document.createElement("canvas")
-      const ctx = canvas.getContext("2d")
-      if (!ctx) return
-
-      const img = new Image()
-      img.crossOrigin = "anonymous"
-      
-      img.onload = () => {
-        canvas.width = bbox.width * 2
-        canvas.height = bbox.height * 2
-        ctx.scale(2, 2)
-        ctx.fillStyle = "white"
-        ctx.fillRect(0, 0, bbox.width, bbox.height)
-        ctx.drawImage(img, 0, 0, bbox.width, bbox.height)
-
-        const link = document.createElement("a")
-        link.download = `${fileName}.png`
-        link.href = canvas.toDataURL("image/png")
-        link.click()
-
-        URL.revokeObjectURL(svgUrl)
-      }
-
-      img.src = svgUrl
-    } catch (error) {
-      console.error("Error downloading chart:", error)
-    }
-  }, [])
+  const {
+    chartRef1,
+    chartRef2,
+    chartRef3,
+    summaryData,
+    vencimientosPorCliente,
+    downloadChart,
+  } = useDashboardSupervisor()
 
   return (
     <div className="p-6 space-y-6">

@@ -1,11 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Search, MapPin, Phone, User } from "lucide-react"
-import { mockClientes } from "@/lib/mock-data"
+import { getClientes } from "@/lib/services/clientes.service"
 import type { Cliente } from "@/lib/types"
 
 interface ClientesListProps {
@@ -15,8 +15,13 @@ interface ClientesListProps {
 
 export function ClientesList({ onBack, onSelectCliente }: ClientesListProps) {
   const [search, setSearch] = useState("")
+  const [clientes, setClientes] = useState<Cliente[]>([])
 
-  const filteredClientes = mockClientes.filter((cliente) =>
+  useEffect(() => {
+    getClientes().then(setClientes)
+  }, [])
+
+  const filteredClientes = clientes.filter((cliente) =>
     cliente.activo && cliente.nombre.toLowerCase().includes(search.toLowerCase())
   )
 

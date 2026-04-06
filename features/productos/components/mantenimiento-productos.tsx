@@ -1,6 +1,5 @@
 "use client"
 
-import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -23,8 +22,7 @@ import {
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { ArrowLeft, Plus, Pencil, Trash2, Search, ImagePlus, Package } from "lucide-react"
-import { mockProductos } from "@/lib/mock-data"
-import type { Producto } from "@/lib/types"
+import { useProductoMaintenance } from "../hooks/useProductoMaintenance"
 
 interface MantenimientoProductosProps {
   onBack?: () => void
@@ -46,105 +44,29 @@ const categorias = [
 const unidades = ["Piezas", "Cajas", "Paquetes", "Kilos", "Litros"]
 
 export function MantenimientoProductos({ onBack }: MantenimientoProductosProps) {
-  const [productos, setProductos] = useState<Producto[]>(mockProductos)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [filterCategoria, setFilterCategoria] = useState<string>("all")
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [editingProduct, setEditingProduct] = useState<Producto | null>(null)
-  const [productToDelete, setProductToDelete] = useState<Producto | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
-  const [formData, setFormData] = useState({
-    nombre: "",
-    sku: "",
-    unidad: "Piezas",
-    categoria: "",
-    imagen: "",
-    activo: true,
-  })
-
-  const filteredProducts = productos.filter((producto) => {
-    const matchesSearch =
-      producto.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      producto.sku.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategoria =
-      filterCategoria === "all" || producto.categoria === filterCategoria
-    return matchesSearch && matchesCategoria
-  })
-
-  const handleOpenDialog = (producto?: Producto) => {
-    if (producto) {
-      setEditingProduct(producto)
-      setFormData({
-        nombre: producto.nombre,
-        sku: producto.sku,
-        unidad: producto.unidad,
-        categoria: producto.categoria || "",
-        imagen: producto.imagen || "",
-        activo: producto.activo,
-      })
-    } else {
-      setEditingProduct(null)
-      setFormData({
-        nombre: "",
-        sku: "",
-        unidad: "Piezas",
-        categoria: "",
-        imagen: "",
-        activo: true,
-      })
-    }
-    setIsDialogOpen(true)
-  }
-
-  const handleSave = () => {
-    if (!formData.nombre || !formData.sku) return
-
-    if (editingProduct) {
-      setProductos(
-        productos.map((p) =>
-          p.id === editingProduct.id
-            ? { ...p, ...formData }
-            : p
-        )
-      )
-    } else {
-      const newProduct: Producto = {
-        id: String(Date.now()),
-        ...formData,
-      }
-      setProductos([...productos, newProduct])
-    }
-    setIsDialogOpen(false)
-  }
-
-  const handleDelete = () => {
-    if (productToDelete) {
-      setProductos(productos.filter((p) => p.id !== productToDelete.id))
-      setIsDeleteDialogOpen(false)
-      setProductToDelete(null)
-    }
-  }
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setFormData({ ...formData, imagen: reader.result as string })
-      }
-      reader.readAsDataURL(file)
-    }
-  }
-
-  const toggleActivo = (producto: Producto) => {
-    setProductos(
-      productos.map((p) =>
-        p.id === producto.id ? { ...p, activo: !p.activo } : p
-      )
-    )
-  }
+  const {
+    productos,
+    filteredProducts,
+    searchTerm,
+    setSearchTerm,
+    filterCategoria,
+    setFilterCategoria,
+    formData,
+    setFormData,
+    isDialogOpen,
+    setIsDialogOpen,
+    isDeleteDialogOpen,
+    setIsDeleteDialogOpen,
+    editingProduct,
+    productToDelete,
+    fileInputRef,
+    handleOpenDialog,
+    handleSave,
+    handleDeleteClick,
+    handleDelete,
+    handleImageUpload,
+    toggleActivo,
+  } = useProductoMaintenance()
 
   return (
     <div className="p-4 space-y-4">
@@ -258,10 +180,7 @@ export function MantenimientoProductos({ onBack }: MantenimientoProductosProps) 
                       variant="ghost"
                       size="icon"
                       className="text-destructive hover:text-destructive"
-                      onClick={() => {
-                        setProductToDelete(producto)
-                        setIsDeleteDialogOpen(true)
-                      }}
+                      onClick={() => handleDeleteClick(producto)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

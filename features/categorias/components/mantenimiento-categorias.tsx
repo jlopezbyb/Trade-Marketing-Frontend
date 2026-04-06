@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -26,8 +25,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { ArrowLeft, Plus, Search, Pencil, Trash2, Tag, RotateCcw } from "lucide-react"
-import { mockCategorias } from "@/lib/mock-data"
-import type { Categoria } from "@/lib/types"
+import { useCategoriaMaintenance } from "../hooks/useCategoriaMaintenance"
 
 interface MantenimientoCategoriasProps {
   onBack?: () => void
@@ -41,93 +39,27 @@ const coloresPredefinidos = [
 ]
 
 export function MantenimientoCategorias({ onBack }: MantenimientoCategoriasProps) {
-  const [categorias, setCategorias] = useState<Categoria[]>(mockCategorias)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [editingCategoria, setEditingCategoria] = useState<Categoria | null>(null)
-  const [categoriaToDelete, setCategoriaToDelete] = useState<Categoria | null>(null)
-
-  const [formData, setFormData] = useState({
-    nombre: "",
-    descripcion: "",
-    color: "#22c55e",
-  })
-
-  const categoriasActivas = categorias.filter((c) => c.activo)
-  const categoriasInactivas = categorias.filter((c) => !c.activo)
-
-  const filteredActivas = categoriasActivas.filter(
-    (c) =>
-      c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (c.descripcion && c.descripcion.toLowerCase().includes(searchTerm.toLowerCase()))
-  )
-
-  const handleOpenCreate = () => {
-    setEditingCategoria(null)
-    setFormData({ nombre: "", descripcion: "", color: "#22c55e" })
-    setIsDialogOpen(true)
-  }
-
-  const handleOpenEdit = (categoria: Categoria) => {
-    setEditingCategoria(categoria)
-    setFormData({
-      nombre: categoria.nombre,
-      descripcion: categoria.descripcion || "",
-      color: categoria.color,
-    })
-    setIsDialogOpen(true)
-  }
-
-  const handleSave = () => {
-    if (!formData.nombre.trim()) return
-
-    if (editingCategoria) {
-      setCategorias((prev) =>
-        prev.map((c) =>
-          c.id === editingCategoria.id
-            ? {
-                ...c,
-                nombre: formData.nombre,
-                descripcion: formData.descripcion,
-                color: formData.color,
-              }
-            : c
-        )
-      )
-    } else {
-      const newCategoria: Categoria = {
-        id: Date.now().toString(),
-        nombre: formData.nombre,
-        descripcion: formData.descripcion,
-        color: formData.color,
-        activo: true,
-      }
-      setCategorias((prev) => [...prev, newCategoria])
-    }
-
-    setIsDialogOpen(false)
-    setFormData({ nombre: "", descripcion: "", color: "#22c55e" })
-  }
-
-  const handleToggleActivo = (id: string) => {
-    setCategorias((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, activo: !c.activo } : c))
-    )
-  }
-
-  const handleDeleteClick = (categoria: Categoria) => {
-    setCategoriaToDelete(categoria)
-    setIsDeleteDialogOpen(true)
-  }
-
-  const handleConfirmDelete = () => {
-    if (categoriaToDelete) {
-      setCategorias((prev) => prev.filter((c) => c.id !== categoriaToDelete.id))
-    }
-    setIsDeleteDialogOpen(false)
-    setCategoriaToDelete(null)
-  }
+  const {
+    categoriasActivas,
+    categoriasInactivas,
+    filteredActivas,
+    searchTerm,
+    setSearchTerm,
+    formData,
+    setFormData,
+    isDialogOpen,
+    setIsDialogOpen,
+    isDeleteDialogOpen,
+    setIsDeleteDialogOpen,
+    editingCategoria,
+    categoriaToDelete,
+    handleOpenCreate,
+    handleOpenEdit,
+    handleSave,
+    handleToggleActivo,
+    handleDeleteClick,
+    handleConfirmDelete,
+  } = useCategoriaMaintenance()
 
   return (
     <div className="p-4 space-y-4">

@@ -16,11 +16,10 @@ import {
 } from "@azure/msal-browser"
 import type { User, UserRole } from "./types"
 import { mockUsers } from "./mock-data"
-import { getMsalInstance, isMsalConfigured, loginRequest } from "./msal-config"
+import { getMsalInstance, isMsalConfigured, loginRequest, msalRedirectResult } from "./msal-config"
 import {
   loginLocal,
   loginEntraAdmin,
-  loginEntraEmployee,
   logoutBackend,
   refreshBackendToken,
   type AuthResponse,
@@ -30,15 +29,13 @@ import {
 // Tipos
 // ---------------------------------------------------------------------------
 
-type EntraLoginRole = "admin" | "employee"
-
 interface AuthContextType {
   user: User | null
   isLoading: boolean
   /** Login con credenciales locales (admin) — mock en dev, API en prod */
   login: (email: string, password: string) => Promise<boolean>
-  /** Login con Microsoft Entra ID (popup). role determina el endpoint del backend. */
-  loginWithEntraId: (role?: EntraLoginRole) => Promise<boolean>
+  /** Login con Microsoft Entra ID (redirect). El rol se determina por el JWT del backend. */
+  loginWithEntraId: () => Promise<boolean>
   logout: () => void
   /** Token JWT del backend para llamadas autenticadas */
   backendToken: string | null
@@ -65,14 +62,13 @@ function decodeJwtPayload(token: string): { exp?: number } | null {
 
 /** Mapea la respuesta del backend a la interfaz User del dominio */
 function mapAuthResponseToUser(authRes: AuthResponse, email: string, name: string): User {
-  // TODO: cuando el backend devuelva los datos del usuario en la respuesta,
-  // usarlos directamente en lugar de inferir aquí.
-  const payload = decodeJwtPayload(authRes.token)
+  const payload = decodeJwtPayload(authRes.token) as Record<string, unknown> | null
+  const tokenRole = payload?.role as string | undefined
   return {
-    id: (payload as Record<string, unknown>)?.sub as string ?? "",
+    id: (payload?.sub as string) ?? "",
     email,
     name,
-    role: "field" as UserRole, // se ajustará con endpoint /me
+    role: tokenRole === "supervisor" ? "supervisor" : "field",
     activo: true,
   }
 }
@@ -137,19 +133,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // ---- Inicializar MSAL ----
-  useEffect(() => {
-    if (!msalEnabled) return
-
-    const instance = getMsalInstance()
-    if (!instance) return
-
-    instance.initialize().then(() => {
-      instance.handleRedirectPromise()
-      setMsalReady(true)
-    })
-  }, [msalEnabled])
-
   // ---- Almacenar tokens del backend ----
   const handleAuthResponse = useCallback(
     (res: AuthResponse, email: string, name: string) => {
@@ -161,6 +144,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     [scheduleRefresh]
   )
+
+  // ---- Inicializar MSAL y procesar redirect ----
+  useEffect(() => {
+    if (!msalEnabled || !msalRedirectResult) return
+
+    let cancelled = false
+    msalRedirectResult.then((response) => {
+      if (cancelled) return
+      setMsalReady(true)
+
+      // Si hay respuesta, es que venimos de un redirect de Microsoft
+      if (response) {
+        const instance = getMsalInstance()
+        instance?.setActiveAccount(response.account)
+
+        const entraToken = response.idToken || response.accessToken
+        const email = response.account?.username ?? ""
+        const name = response.account?.name ?? email
+
+        if (USE_MOCK) {
+          setUser({
+            id: response.account?.localAccountId ?? "",
+            email,
+            name,
+            role: "supervisor",
+            activo: true,
+          })
+          console.log("✅ Inicio de sesión exitoso (mock) —", name, "(", email, ")")
+        } else {
+          // Enviar token al backend — el rol viene en el JWT de respuesta
+          loginEntraAdmin(entraToken).then((res) => {
+            if (cancelled) return
+            handleAuthResponse(res, email, name)
+            console.log("✅ Inicio de sesión exitoso —", name, "(", email, ")")
+          }).catch((err) => {
+            console.error("❌ Error al autenticar con el backend:", err)
+          })
+        }
+      }
+    })
+
+    return () => { cancelled = true }
+  }, [msalEnabled, handleAuthResponse])
 
   // ---- Login local (credenciales) ----
   const login = useCallback(
@@ -197,49 +223,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [handleAuthResponse]
   )
 
-  // ---- Login con Entra ID (popup → backend) ----
+  // ---- Login con Entra ID (redirect) ----
   const loginWithEntraId = useCallback(
-    async (role: EntraLoginRole = "employee"): Promise<boolean> => {
+    async (): Promise<boolean> => {
       const instance = getMsalInstance()
       if (!instance || !msalReady) return false
 
-      setIsLoading(true)
       try {
-        // 1. Popup de Microsoft → obtener access token de Entra ID
-        const msalResponse = await instance.loginPopup(loginRequest)
-        instance.setActiveAccount(msalResponse.account)
-
-        const entraAccessToken = msalResponse.accessToken
-        const email = msalResponse.account?.username ?? ""
-        const name = msalResponse.account?.name ?? email
-
-        // Si no hay backend configurado, solo usar info de MSAL (modo mock)
-        if (USE_MOCK) {
-          setUser({
-            id: msalResponse.account?.localAccountId ?? "",
-            email,
-            name,
-            role: role === "admin" ? "supervisor" : "field",
-            activo: true,
-          })
-          setIsLoading(false)
-          return true
-        }
-
-        // 2. Enviar el access token al backend correspondiente
-        const backendLogin = role === "admin" ? loginEntraAdmin : loginEntraEmployee
-        const res = await backendLogin(entraAccessToken)
-
-        // 3. Almacenar tokens del backend
-        handleAuthResponse(res, email, name)
-        setIsLoading(false)
+        // Redirige toda la página a Microsoft. Al volver,
+        // handleRedirectPromise (nivel de módulo) procesa el código.
+        await instance.loginRedirect(loginRequest)
+        // No retorna — el navegador navega a Microsoft
         return true
-      } catch {
-        setIsLoading(false)
+      } catch (err) {
+        console.error("❌ Error en inicio de sesión:", err)
         return false
       }
     },
-    [msalReady, handleAuthResponse]
+    [msalReady]
   )
 
   // ---- Obtener token silencioso (para renovar el access token de Entra) ----
@@ -279,19 +280,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Logout de MSAL
+    setUser(null)
+    setBackendToken(null)
+    setRefreshToken(null)
+
+    // Logout de MSAL (redirect — limpia sesión en Microsoft)
     const instance = getMsalInstance()
     if (instance && instance.getActiveAccount()) {
       try {
-        await instance.logoutPopup()
+        await instance.logoutRedirect()
       } catch {
         // Continuar
       }
     }
-
-    setUser(null)
-    setBackendToken(null)
-    setRefreshToken(null)
   }, [backendToken])
 
   return (

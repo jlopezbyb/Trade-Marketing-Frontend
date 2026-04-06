@@ -18,7 +18,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
 
   const handleEntraIdLogin = async () => {
     setError("")
-    const success = await loginWithEntraId("admin")
+    const success = await loginWithEntraId()
     if (success) {
       onSuccess()
     } else {

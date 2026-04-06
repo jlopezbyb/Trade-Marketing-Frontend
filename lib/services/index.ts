@@ -1,0 +1,6 @@
+export * from "./clientes.service"
+export * from "./productos.service"
+export * from "./visitas.service"
+export * from "./inventario.service"
+export * from "./categorias.service"
+export * from "./usuarios.service"

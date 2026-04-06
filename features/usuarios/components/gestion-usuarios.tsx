@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -34,136 +33,38 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Search, Plus, Edit2, Trash2, Users, Building2, UserCheck, UserX } from "lucide-react"
-import { mockUsers, mockClientes } from "@/lib/mock-data"
-import type { User, Cliente, UserRole } from "@/lib/types"
+import { useUsuarioMaintenance } from "../hooks/useUsuarioMaintenance"
+import type { User } from "@/lib/types"
 
 export function GestionUsuarios() {
-  const [usuarios, setUsuarios] = useState<User[]>(mockUsers)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [showDialog, setShowDialog] = useState(false)
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [showAsignarDialog, setShowAsignarDialog] = useState(false)
-  const [editingUser, setEditingUser] = useState<User | null>(null)
-  const [userToDelete, setUserToDelete] = useState<User | null>(null)
-  const [userToAsignar, setUserToAsignar] = useState<User | null>(null)
-
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    role: "field" as UserRole,
-    imagen: "",
-  })
-
-  const [clientesSeleccionados, setClientesSeleccionados] = useState<string[]>([])
-
-  const filteredUsuarios = usuarios.filter(
-    (u) =>
-      u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-
-  const usuariosActivos = filteredUsuarios.filter((u) => u.activo)
-  const usuariosInactivos = filteredUsuarios.filter((u) => !u.activo)
-
-  const handleOpenDialog = (user?: User) => {
-    if (user) {
-      setEditingUser(user)
-      setFormData({
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        imagen: user.imagen || "",
-      })
-    } else {
-      setEditingUser(null)
-      setFormData({
-        name: "",
-        email: "",
-        role: "field",
-        imagen: "",
-      })
-    }
-    setShowDialog(true)
-  }
-
-  const handleSave = () => {
-    if (editingUser) {
-      setUsuarios((prev) =>
-        prev.map((u) =>
-          u.id === editingUser.id
-            ? {
-                ...u,
-                name: formData.name,
-                email: formData.email,
-                role: formData.role,
-                imagen: formData.imagen,
-              }
-            : u
-        )
-      )
-    } else {
-      const newUser: User = {
-        id: Date.now().toString(),
-        name: formData.name,
-        email: formData.email,
-        role: formData.role,
-        activo: true,
-        clientesAsignados: [],
-        imagen: formData.imagen,
-      }
-      setUsuarios((prev) => [...prev, newUser])
-    }
-    setShowDialog(false)
-  }
-
-  const handleToggleActivo = (userId: string) => {
-    setUsuarios((prev) =>
-      prev.map((u) => (u.id === userId ? { ...u, activo: !u.activo } : u))
-    )
-  }
-
-  const handleDelete = () => {
-    if (userToDelete) {
-      setUsuarios((prev) => prev.filter((u) => u.id !== userToDelete.id))
-      setShowDeleteDialog(false)
-      setUserToDelete(null)
-    }
-  }
-
-  const handleOpenAsignar = (user: User) => {
-    setUserToAsignar(user)
-    setClientesSeleccionados(user.clientesAsignados || [])
-    setShowAsignarDialog(true)
-  }
-
-  const handleSaveAsignacion = () => {
-    if (userToAsignar) {
-      setUsuarios((prev) =>
-        prev.map((u) =>
-          u.id === userToAsignar.id
-            ? { ...u, clientesAsignados: clientesSeleccionados }
-            : u
-        )
-      )
-      setShowAsignarDialog(false)
-      setUserToAsignar(null)
-    }
-  }
-
-  const toggleCliente = (clienteId: string) => {
-    setClientesSeleccionados((prev) =>
-      prev.includes(clienteId)
-        ? prev.filter((id) => id !== clienteId)
-        : [...prev, clienteId]
-    )
-  }
-
-  const getClienteNombres = (clienteIds: string[]) => {
-    return clienteIds
-      .map((id) => mockClientes.find((c) => c.id === id)?.nombre)
-      .filter(Boolean)
-      .join(", ")
-  }
+  const {
+    allClientes,
+    usuariosActivos,
+    usuariosInactivos,
+    searchTerm,
+    setSearchTerm,
+    formData,
+    setFormData,
+    showDialog,
+    setShowDialog,
+    showDeleteDialog,
+    setShowDeleteDialog,
+    showAsignarDialog,
+    setShowAsignarDialog,
+    editingUser,
+    userToDelete,
+    userToAsignar,
+    clientesSeleccionados,
+    handleOpenDialog,
+    handleSave,
+    handleToggleActivo,
+    handleDeleteClick,
+    handleDelete,
+    handleOpenAsignar,
+    handleSaveAsignacion,
+    toggleCliente,
+    getClienteNombres,
+  } = useUsuarioMaintenance()
 
   const renderUserCard = (user: User) => (
     <Card key={user.id} className={!user.activo ? "opacity-60" : ""}>
@@ -373,7 +274,7 @@ export function GestionUsuarios() {
           </DialogHeader>
 
           <div className="space-y-3 max-h-[400px] overflow-y-auto">
-            {mockClientes
+            {allClientes
               .filter((c) => c.activo)
               .map((cliente) => (
                 <Card

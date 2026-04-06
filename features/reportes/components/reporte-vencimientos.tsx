@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -20,89 +19,20 @@ import {
   Calendar,
   Building2,
 } from "lucide-react"
-import { mockProductosPorVencer, mockClientes } from "@/lib/mock-data"
-import type { ProductoPorVencer } from "@/lib/types"
+import { useReporteVencimientos } from "../hooks/useReporteVencimientos"
 
 export function ReporteVencimientos() {
-  const [filtroCliente, setFiltroCliente] = useState<string>("todos")
-  const [filtroEstado, setFiltroEstado] = useState<string>("todos")
-
-  const productosFiltrados = mockProductosPorVencer.filter((p) => {
-    const matchCliente = filtroCliente === "todos" || p.clienteId === filtroCliente
-    const matchEstado = filtroEstado === "todos" || p.estado === filtroEstado
-    return matchCliente && matchEstado
-  })
-
-  const countByEstado = {
-    critico: mockProductosPorVencer.filter((p) => p.estado === "critico").length,
-    alerta: mockProductosPorVencer.filter((p) => p.estado === "alerta").length,
-    proximo: mockProductosPorVencer.filter((p) => p.estado === "proximo").length,
-  }
-
-  const getEstadoConfig = (estado: string) => {
-    switch (estado) {
-      case "critico":
-        return {
-          icon: AlertTriangle,
-          color: "text-red-600",
-          bg: "bg-red-100",
-          badge: "bg-red-500 text-white",
-          label: "Crítico (0-7 días)",
-        }
-      case "alerta":
-        return {
-          icon: AlertCircle,
-          color: "text-amber-600",
-          bg: "bg-amber-100",
-          badge: "bg-amber-500 text-white",
-          label: "Alerta (8-15 días)",
-        }
-      case "proximo":
-        return {
-          icon: Clock,
-          color: "text-blue-600",
-          bg: "bg-blue-100",
-          badge: "bg-blue-500 text-white",
-          label: "Próximo (16-30 días)",
-        }
-      default:
-        return {
-          icon: Clock,
-          color: "text-muted-foreground",
-          bg: "bg-muted",
-          badge: "bg-muted text-muted-foreground",
-          label: "Sin definir",
-        }
-    }
-  }
-
-  const exportToCSV = () => {
-    const headers = [
-      "Cliente",
-      "Producto",
-      "Lote",
-      "Cantidad",
-      "Fecha Vencimiento",
-      "Días para Vencer",
-      "Estado",
-    ]
-    const rows = productosFiltrados.map((p) => [
-      p.clienteNombre,
-      p.productoNombre,
-      p.lote,
-      p.cantidad,
-      p.fechaVencimiento,
-      p.diasParaVencer,
-      p.estado,
-    ])
-
-    const csvContent = [headers, ...rows].map((row) => row.join(",")).join("\n")
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
-    const link = document.createElement("a")
-    link.href = URL.createObjectURL(blob)
-    link.download = `reporte-vencimientos-${new Date().toISOString().split("T")[0]}.csv`
-    link.click()
-  }
+  const {
+    filtroCliente,
+    setFiltroCliente,
+    filtroEstado,
+    setFiltroEstado,
+    clientes,
+    productosFiltrados,
+    countByEstado,
+    getEstadoConfig,
+    exportToCSV,
+  } = useReporteVencimientos()
 
   return (
     <div className="space-y-6">
@@ -173,7 +103,7 @@ export function ReporteVencimientos() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="todos">Todos los clientes</SelectItem>
-            {mockClientes
+            {clientes
               .filter((c) => c.activo)
               .map((cliente) => (
                 <SelectItem key={cliente.id} value={cliente.id}>

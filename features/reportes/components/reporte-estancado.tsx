@@ -1,42 +1,22 @@
 "use client"
 
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Download, AlertTriangle, Package, Calendar, Clock } from "lucide-react"
-import { mockInventarioEstancado } from "@/lib/mock-data"
+import { useReporteEstancado } from "../hooks/useReporteEstancado"
 
 interface ReporteEstancadoProps {
   onBack?: () => void
 }
 
 export function ReporteEstancado({ onBack }: ReporteEstancadoProps) {
-  const [diasFilter, setDiasFilter] = useState("7")
-
-  const filteredInventario = mockInventarioEstancado.filter(
-    (item) => item.diasSinCambio >= parseInt(diasFilter)
-  )
-
-  const handleExportCSV = () => {
-    const headers = ["Cliente", "Producto", "Cantidad", "Última Actualización", "Días Sin Cambio"]
-    const rows = filteredInventario.map((item) => [
-      item.clienteNombre,
-      item.productoNombre,
-      item.cantidad.toString(),
-      item.fechaActualizacion,
-      item.diasSinCambio.toString(),
-    ])
-
-    const csv = [headers.join(","), ...rows.map((row) => row.join(","))].join("\n")
-    const blob = new Blob([csv], { type: "text/csv" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `inventario-estancado-${new Date().toISOString().split("T")[0]}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
+  const {
+    diasFilter,
+    setDiasFilter,
+    filteredInventario,
+    handleExportCSV,
+  } = useReporteEstancado()
 
   return (
     <div className="flex flex-col min-h-full">

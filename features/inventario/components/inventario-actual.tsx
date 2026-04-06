@@ -1,30 +1,30 @@
 "use client"
 
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Search, Package, Calendar, Filter } from "lucide-react"
-import { mockInventarioActual, mockClientes, mockProductos } from "@/lib/mock-data"
+import { useInventarioActual } from "../hooks/useInventarioActual"
 
 interface InventarioActualProps {
   onBack?: () => void
 }
 
 export function InventarioActual({ onBack }: InventarioActualProps) {
-  const [search, setSearch] = useState("")
-  const [clienteFilter, setClienteFilter] = useState("all")
-  const [productoFilter, setProductoFilter] = useState("all")
-  const [showFilters, setShowFilters] = useState(false)
-
-  const filteredInventario = mockInventarioActual.filter((item) => {
-    const matchesSearch = item.clienteNombre.toLowerCase().includes(search.toLowerCase()) ||
-      item.productoNombre.toLowerCase().includes(search.toLowerCase())
-    const matchesCliente = clienteFilter === "all" || item.clienteId === clienteFilter
-    const matchesProducto = productoFilter === "all" || item.productoId === productoFilter
-    return matchesSearch && matchesCliente && matchesProducto
-  })
+  const {
+    search,
+    setSearch,
+    clienteFilter,
+    setClienteFilter,
+    productoFilter,
+    setProductoFilter,
+    showFilters,
+    setShowFilters,
+    clientes,
+    productos,
+    filteredInventario,
+  } = useInventarioActual()
 
   return (
     <div className="flex flex-col min-h-full">
@@ -70,7 +70,7 @@ export function InventarioActual({ onBack }: InventarioActualProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos los clientes</SelectItem>
-                {mockClientes.map((cliente) => (
+                {clientes.map((cliente) => (
                   <SelectItem key={cliente.id} value={cliente.id}>
                     {cliente.nombre}
                   </SelectItem>
@@ -84,7 +84,7 @@ export function InventarioActual({ onBack }: InventarioActualProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos los productos</SelectItem>
-                {mockProductos.map((producto) => (
+                {productos.map((producto) => (
                   <SelectItem key={producto.id} value={producto.id}>
                     {producto.nombre}
                   </SelectItem>

@@ -1,14 +1,13 @@
 "use client"
 
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ArrowLeft, Package, CheckCircle, Plus, Trash2, CalendarIcon } from "lucide-react"
-import { mockProductos } from "@/lib/mock-data"
-import type { Cliente, LoteInventario } from "@/lib/types"
+import { useRegistroInventario } from "../hooks/useRegistroInventario"
+import type { Cliente } from "@/lib/types"
 
 interface RegistroInventarioProps {
   cliente: Cliente
@@ -17,128 +16,20 @@ interface RegistroInventarioProps {
   onComplete: () => void
 }
 
-interface ProductoConLotes {
-  productoId: string
-  productoNombre: string
-  sku: string
-  unidad: string
-  lotes: LoteInventario[]
-}
-
 export function RegistroInventario({ cliente, visitaId, onBack, onComplete }: RegistroInventarioProps) {
-  const [productosConLotes, setProductosConLotes] = useState<ProductoConLotes[]>([])
-  const [success, setSuccess] = useState(false)
-
-  const agregarProducto = (productoId: string) => {
-    const producto = mockProductos.find((p) => p.id === productoId)
-    if (!producto) return
-
-    // Check if product already exists
-    if (productosConLotes.find((p) => p.productoId === productoId)) {
-      return
-    }
-
-    setProductosConLotes((prev) => [
-      ...prev,
-      {
-        productoId: producto.id,
-        productoNombre: producto.nombre,
-        sku: producto.sku,
-        unidad: producto.unidad,
-        lotes: [
-          {
-            id: `lote-${Date.now()}`,
-            lote: "",
-            cantidad: 0,
-            fechaVencimiento: "",
-          },
-        ],
-      },
-    ])
-  }
-
-  const eliminarProducto = (productoId: string) => {
-    setProductosConLotes((prev) => prev.filter((p) => p.productoId !== productoId))
-  }
-
-  const agregarLote = (productoId: string) => {
-    setProductosConLotes((prev) =>
-      prev.map((p) => {
-        if (p.productoId === productoId) {
-          return {
-            ...p,
-            lotes: [
-              ...p.lotes,
-              {
-                id: `lote-${Date.now()}`,
-                lote: "",
-                cantidad: 0,
-                fechaVencimiento: "",
-              },
-            ],
-          }
-        }
-        return p
-      })
-    )
-  }
-
-  const eliminarLote = (productoId: string, loteId: string) => {
-    setProductosConLotes((prev) =>
-      prev.map((p) => {
-        if (p.productoId === productoId) {
-          const nuevosLotes = p.lotes.filter((l) => l.id !== loteId)
-          return {
-            ...p,
-            lotes: nuevosLotes.length > 0 ? nuevosLotes : p.lotes,
-          }
-        }
-        return p
-      })
-    )
-  }
-
-  const actualizarLote = (
-    productoId: string,
-    loteId: string,
-    campo: keyof LoteInventario,
-    valor: string | number
-  ) => {
-    setProductosConLotes((prev) =>
-      prev.map((p) => {
-        if (p.productoId === productoId) {
-          return {
-            ...p,
-            lotes: p.lotes.map((l) => {
-              if (l.id === loteId) {
-                return { ...l, [campo]: valor }
-              }
-              return l
-            }),
-          }
-        }
-        return p
-      })
-    )
-  }
-
-  const calcularSubtotal = (producto: ProductoConLotes) => {
-    return producto.lotes.reduce((sum, lote) => sum + lote.cantidad, 0)
-  }
-
-  const calcularTotal = () => {
-    return productosConLotes.reduce((sum, p) => sum + calcularSubtotal(p), 0)
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    setSuccess(true)
-  }
-
-  const productosDisponibles = mockProductos.filter(
-    (p) => p.activo && !productosConLotes.find((pl) => pl.productoId === p.id)
-  )
+  const {
+    productosConLotes,
+    productosDisponibles,
+    success,
+    agregarProducto,
+    eliminarProducto,
+    agregarLote,
+    eliminarLote,
+    actualizarLote,
+    calcularSubtotal,
+    calcularTotal,
+    handleSubmit,
+  } = useRegistroInventario()
 
   if (success) {
     return (

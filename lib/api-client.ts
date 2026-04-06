@@ -1,4 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001/api/v1"
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3500/api/v1"
 
 /** Respuesta de los endpoints de login */
 export interface AuthResponse {

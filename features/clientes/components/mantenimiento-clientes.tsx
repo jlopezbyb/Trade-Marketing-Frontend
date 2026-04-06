@@ -1,6 +1,5 @@
 "use client"
 
-import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -24,151 +23,37 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { ArrowLeft, Plus, Search, Edit2, Trash2, Upload, Building2, Phone, Mail, MapPin, User } from "lucide-react"
-import { mockClientes } from "@/lib/mock-data"
-import type { Cliente } from "@/lib/types"
+import { useClienteMaintenance } from "../hooks/useClienteMaintenance"
 
 interface MantenimientoClientesProps {
   onBack?: () => void
 }
 
 export function MantenimientoClientes({ onBack }: MantenimientoClientesProps) {
-  const [clientes, setClientes] = useState<Cliente[]>(mockClientes)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [editingCliente, setEditingCliente] = useState<Cliente | null>(null)
-  const [clienteToDelete, setClienteToDelete] = useState<Cliente | null>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
-  const [formData, setFormData] = useState({
-    nombre: "",
-    direccion: "",
-    telefono: "",
-    contacto: "",
-    email: "",
-    imagen: "",
-  })
-
-  const filteredClientes = clientes.filter(
-    (cliente) =>
-      cliente.activo &&
-      (cliente.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        cliente.direccion.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        cliente.contacto.toLowerCase().includes(searchTerm.toLowerCase()))
-  )
-
-  const inactiveClientes = clientes.filter((cliente) => !cliente.activo)
-
-  const handleOpenDialog = (cliente?: Cliente) => {
-    if (cliente) {
-      setEditingCliente(cliente)
-      setFormData({
-        nombre: cliente.nombre,
-        direccion: cliente.direccion,
-        telefono: cliente.telefono,
-        contacto: cliente.contacto,
-        email: cliente.email || "",
-        imagen: cliente.imagen || "",
-      })
-      setImagePreview(cliente.imagen || null)
-    } else {
-      setEditingCliente(null)
-      setFormData({
-        nombre: "",
-        direccion: "",
-        telefono: "",
-        contacto: "",
-        email: "",
-        imagen: "",
-      })
-      setImagePreview(null)
-    }
-    setIsDialogOpen(true)
-  }
-
-  const handleCloseDialog = () => {
-    setIsDialogOpen(false)
-    setEditingCliente(null)
-    setImagePreview(null)
-  }
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        const result = reader.result as string
-        setImagePreview(result)
-        setFormData((prev) => ({ ...prev, imagen: result }))
-      }
-      reader.readAsDataURL(file)
-    }
-  }
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    const file = e.dataTransfer.files?.[0]
-    if (file && file.type.startsWith("image/")) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        const result = reader.result as string
-        setImagePreview(result)
-        setFormData((prev) => ({ ...prev, imagen: result }))
-      }
-      reader.readAsDataURL(file)
-    }
-  }
-
-  const handleSubmit = () => {
-    if (!formData.nombre || !formData.direccion || !formData.telefono || !formData.contacto) {
-      return
-    }
-
-    if (editingCliente) {
-      setClientes((prev) =>
-        prev.map((c) =>
-          c.id === editingCliente.id
-            ? { ...c, ...formData }
-            : c
-        )
-      )
-    } else {
-      const newCliente: Cliente = {
-        id: Date.now().toString(),
-        ...formData,
-        activo: true,
-      }
-      setClientes((prev) => [...prev, newCliente])
-    }
-
-    handleCloseDialog()
-  }
-
-  const handleDeleteClick = (cliente: Cliente) => {
-    setClienteToDelete(cliente)
-    setIsDeleteDialogOpen(true)
-  }
-
-  const handleConfirmDelete = () => {
-    if (clienteToDelete) {
-      setClientes((prev) =>
-        prev.map((c) =>
-          c.id === clienteToDelete.id ? { ...c, activo: false } : c
-        )
-      )
-    }
-    setIsDeleteDialogOpen(false)
-    setClienteToDelete(null)
-  }
-
-  const handleReactivate = (cliente: Cliente) => {
-    setClientes((prev) =>
-      prev.map((c) =>
-        c.id === cliente.id ? { ...c, activo: true } : c
-      )
-    )
-  }
+  const {
+    filteredClientes,
+    inactiveClientes,
+    searchTerm,
+    setSearchTerm,
+    formData,
+    setFormData,
+    isDialogOpen,
+    setIsDialogOpen,
+    isDeleteDialogOpen,
+    setIsDeleteDialogOpen,
+    editingCliente,
+    clienteToDelete,
+    imagePreview,
+    fileInputRef,
+    handleImageUpload,
+    handleDrop,
+    handleOpenDialog,
+    handleCloseDialog,
+    handleSubmit,
+    handleDeleteClick,
+    handleConfirmDelete,
+    handleReactivate,
+  } = useClienteMaintenance()
 
   return (
     <div className="p-4 space-y-4">
