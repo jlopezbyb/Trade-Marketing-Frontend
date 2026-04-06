@@ -134,7 +134,7 @@ function AppContent() {
   // Supervisor layout with sidebar
   if (user.role === "supervisor") {
     return (
-      <div className="min-h-screen flex bg-background">
+      <div className="h-screen flex overflow-hidden bg-background">
         <SupervisorSidebar currentPage={currentPage} onNavigate={handleNavigate} />
         <div className="flex-1 flex flex-col min-w-0">
           <AppHeader />
