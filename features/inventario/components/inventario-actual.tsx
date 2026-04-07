@@ -95,32 +95,46 @@ export function InventarioActual({ onBack }: InventarioActualProps) {
         )}
       </div>
 
-      {/* Inventory List */}
+      {/* Inventory List agrupada por cliente */}
       <div className="flex-1 p-4 space-y-3">
         {filteredInventario.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             No se encontraron registros
           </div>
         ) : (
-          filteredInventario.map((item) => (
-            <Card key={item.id}>
+          // Agrupar por clienteId
+          Object.entries(
+            filteredInventario.reduce((acc, item) => {
+              if (!acc[item.clienteId]) acc[item.clienteId] = { clienteNombre: item.clienteNombre, items: [] }
+              acc[item.clienteId].items.push(item)
+              return acc
+            }, {} as Record<string, { clienteNombre: string; items: typeof filteredInventario }>)
+          ).map(([clienteId, grupo]) => (
+            <Card key={clienteId}>
               <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-foreground">{item.clienteNombre}</h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Package className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">{item.productoNombre}</span>
-                    </div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">{item.fechaActualizacion}</span>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-bold text-primary">{item.cantidad}</div>
-                    <div className="text-xs text-muted-foreground">unidades</div>
-                  </div>
+                <h3 className="font-bold text-lg text-foreground mb-2 flex items-center gap-2">
+                  <Package className="h-5 w-5 text-primary" />
+                  {grupo.clienteNombre || `Cliente #${clienteId}`}
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead>
+                      <tr className="text-muted-foreground border-b">
+                        <th className="text-left py-1 pr-2 font-semibold">Producto</th>
+                        <th className="text-left py-1 pr-2 font-semibold">Fecha</th>
+                        <th className="text-right py-1 pl-2 font-semibold">Cantidad</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {grupo.items.map((item) => (
+                        <tr key={item.id} className="border-b last:border-0">
+                          <td className="py-1 pr-2">{item.productoNombre}</td>
+                          <td className="py-1 pr-2">{item.fechaActualizacion}</td>
+                          <td className="py-1 pl-2 text-right font-bold text-primary">{item.cantidad}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </CardContent>
             </Card>

@@ -25,7 +25,8 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
   if (_authToken && !headers.has("Authorization")) {
     headers.set("Authorization", `Bearer ${_authToken}`)
   }
-  if (!headers.has("Content-Type") && options.body) {
+  // Solo poner Content-Type si no es FormData
+  if (!headers.has("Content-Type") && options.body && !(options.body instanceof FormData)) {
     headers.set("Content-Type", "application/json")
   }
 

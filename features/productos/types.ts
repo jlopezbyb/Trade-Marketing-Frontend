@@ -5,5 +5,6 @@ export interface Producto {
   unidad: string
   imagen?: string
   categoria?: string
+  categoriaId?: string
   activo: boolean
 }

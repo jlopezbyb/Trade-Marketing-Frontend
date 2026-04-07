@@ -1,25 +1,18 @@
-"use client"
-
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Upload } from "lucide-react"
-import type { Cliente } from "@/features/clientes/types"
+import { getImageUrl } from "@/lib/services/clientes.service"
 
 interface ClienteFormData {
   nombre: string
+  cliente_code: string
   direccion: string
   contacto: string
   telefono: string
   email: string
+  imagen: string
 }
 
 interface ClienteFormDialogProps {
@@ -27,13 +20,14 @@ interface ClienteFormDialogProps {
   onOpenChange: (open: boolean) => void
   formData: ClienteFormData
   setFormData: React.Dispatch<React.SetStateAction<ClienteFormData>>
-  editingCliente: Cliente | null
+  editingCliente: any
   imagePreview: string | null
   fileInputRef: React.RefObject<HTMLInputElement | null>
   onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
   onDrop: (e: React.DragEvent) => void
   onClose: () => void
   onSubmit: () => void
+  loading: boolean
 }
 
 export function ClienteFormDialog({
@@ -48,6 +42,7 @@ export function ClienteFormDialog({
   onDrop,
   onClose,
   onSubmit,
+  loading,
 }: ClienteFormDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -62,7 +57,6 @@ export function ClienteFormDialog({
               : "Ingresa los datos del nuevo cliente"}
           </DialogDescription>
         </DialogHeader>
-
         <div className="space-y-4">
           {/* Image Upload */}
           <div className="space-y-2">
@@ -82,6 +76,15 @@ export function ClienteFormDialog({
                     crossOrigin="anonymous"
                   />
                 </div>
+              ) : formData.imagen ? (
+                <div className="relative aspect-video">
+                  <img
+                    src={getImageUrl(formData.imagen)}
+                    alt="Actual"
+                    className="w-full h-full object-cover rounded-md"
+                    crossOrigin="anonymous"
+                  />
+                </div>
               ) : (
                 <div className="py-8">
                   <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
@@ -93,13 +96,12 @@ export function ClienteFormDialog({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
                 className="hidden"
                 onChange={onImageUpload}
               />
             </div>
           </div>
-
           <div className="space-y-2">
             <Label htmlFor="nombre">Nombre del Negocio *</Label>
             <Input
@@ -111,7 +113,17 @@ export function ClienteFormDialog({
               placeholder="Ej: Supermercado El Sol"
             />
           </div>
-
+          <div className="space-y-2">
+            <Label htmlFor="cliente_code">Código Cliente</Label>
+            <Input
+              id="cliente_code"
+              value={formData.cliente_code}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, cliente_code: e.target.value }))
+              }
+              placeholder="Ej: C123"
+            />
+          </div>
           <div className="space-y-2">
             <Label htmlFor="direccion">Dirección *</Label>
             <Input
@@ -123,7 +135,6 @@ export function ClienteFormDialog({
               placeholder="Ej: Av. Principal 123, Col. Centro"
             />
           </div>
-
           <div className="space-y-2">
             <Label htmlFor="contacto">Persona de Contacto *</Label>
             <Input
@@ -135,7 +146,6 @@ export function ClienteFormDialog({
               placeholder="Ej: Juan Pérez"
             />
           </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="telefono">Teléfono *</Label>
@@ -162,12 +172,11 @@ export function ClienteFormDialog({
             </div>
           </div>
         </div>
-
         <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="outline" onClick={onClose}>
             Cancelar
           </Button>
-          <Button onClick={onSubmit}>
+          <Button onClick={onSubmit} disabled={loading}>
             {editingCliente ? "Guardar Cambios" : "Crear Cliente"}
           </Button>
         </DialogFooter>
@@ -175,3 +184,4 @@ export function ClienteFormDialog({
     </Dialog>
   )
 }
+// ...existing code...

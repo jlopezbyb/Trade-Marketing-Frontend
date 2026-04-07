@@ -30,6 +30,12 @@ export function RegistroInventario({ cliente, visitaId, onBack, onComplete }: Re
     handleSubmit,
   } = useRegistroInventario()
 
+  // Wrapper para pasar clienteId al hook
+  const handleSubmitWithCliente = (e: React.FormEvent) => {
+    // @ts-ignore
+    handleSubmit(e, cliente.id)
+  }
+
   if (success) {
     return (
       <InventarioSuccessView
@@ -57,7 +63,7 @@ export function RegistroInventario({ cliente, visitaId, onBack, onComplete }: Re
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex-1 flex flex-col">
+      <form onSubmit={handleSubmitWithCliente} className="flex-1 flex flex-col">
         <div className="flex-1 p-4 space-y-4">
           {/* Selector de productos */}
           <Card>

@@ -1,5 +1,12 @@
 import { useState, useEffect, useCallback } from "react"
 import { getProductos } from "@/lib/services/productos.service"
+import {
+  createInventario,
+  updateInventario,
+  deleteInventario,
+  type InventarioPayload,
+} from "@/lib/services/inventario.service"
+import type { InventarioItem } from "@/features/inventario/types"
 import type { LoteInventario } from "@/features/inventario/types"
 import type { Producto } from "@/features/productos/types"
 
@@ -122,10 +129,42 @@ export function useRegistroInventario() {
     return productosConLotes.reduce((sum, p) => sum + calcularSubtotal(p), 0)
   }, [productosConLotes, calcularSubtotal])
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+
+
+  // Crea un registro de inventario completo (payload agrupado)
+  const handleSubmit = useCallback(async (e: React.FormEvent, clienteId?: string) => {
     e.preventDefault()
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    setSuccess(true)
+    try {
+      if (!clienteId) throw new Error("Falta clienteId")
+      const payload: InventarioPayload = {
+        cliente_id: Number(clienteId),
+        fecha: new Date().toISOString().slice(0, 10),
+        items: productosConLotes.map((producto) => ({
+          producto_id: Number(producto.productoId),
+          cantidad: producto.lotes.reduce((sum, l) => sum + l.cantidad, 0),
+          lotes: producto.lotes.map((l) => ({
+            lote: l.lote,
+            cantidad: l.cantidad,
+            fecha_vencimiento: l.fechaVencimiento,
+          })),
+        })),
+      }
+      await createInventario(payload)
+      setSuccess(true)
+    } catch (err) {
+      // TODO: Manejar error con toast
+      // eslint-disable-next-line no-console
+      console.error(err)
+    }
+  }, [productosConLotes])
+
+  // CRUD helpers para edición/eliminación futura
+  const editarInventario = useCallback(async (id: string, data: Partial<InventarioItem>) => {
+    await updateInventario(id, data)
+  }, [])
+
+  const eliminarInventario = useCallback(async (id: string) => {
+    await deleteInventario(id)
   }, [])
 
   return {
@@ -141,5 +180,7 @@ export function useRegistroInventario() {
     calcularSubtotal,
     calcularTotal,
     handleSubmit,
+    editarInventario,
+    eliminarInventario,
   }
 }

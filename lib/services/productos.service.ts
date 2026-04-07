@@ -1,3 +1,12 @@
+// Helper para construir la URL absoluta de imagen de producto
+export function getProductoImageUrl(imagen: string | undefined) {
+  if (!imagen) return ""
+  if (imagen.startsWith("http")) return imagen
+  // Obtener la base URL del backend de variable de entorno pública
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/api\/v1$/, "") || ""
+  if (imagen.startsWith("/uploads")) return `${baseUrl}${imagen}`
+  return imagen
+}
 import { apiFetch, USE_MOCK, type PaginatedResponse } from "@/lib/api-client"
 import type { Producto } from "@/lib/types"
 import { mockProductos } from "@/lib/mock-data"
@@ -25,6 +34,7 @@ function mapProducto(raw: ProductoAPI): Producto {
     unidad: raw.unidad,
     imagen: raw.imagen_url ?? undefined,
     categoria: raw.categoria?.nombre ?? raw.categoria_id,
+    categoriaId: raw.categoria_id,
     activo: raw.activo,
   }
 }
@@ -55,9 +65,11 @@ export async function createProducto(data: any, isFormData = false): Promise<Pro
   const options: RequestInit = {
     method: "POST",
     body: isFormData ? data : JSON.stringify(data),
+    headers: undefined,
   }
+  // No enviar Content-Type si es FormData
   if (!isFormData) {
-    (options.headers ||= {})["Content-Type"] = "application/json"
+    options.headers = { "Content-Type": "application/json" }
   }
   const raw = await apiFetch<ProductoAPI>("/productos", options)
   return mapProducto(raw)
@@ -73,9 +85,10 @@ export async function updateProducto(id: string, data: any, isFormData = false):
   const options: RequestInit = {
     method: "PUT",
     body: isFormData ? data : JSON.stringify(data),
+    headers: undefined,
   }
   if (!isFormData) {
-    (options.headers ||= {})["Content-Type"] = "application/json"
+    options.headers = { "Content-Type": "application/json" }
   }
   const raw = await apiFetch<ProductoAPI>(`/productos/${encodeURIComponent(id)}`, options)
   return mapProducto(raw)

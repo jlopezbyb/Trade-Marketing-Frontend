@@ -28,6 +28,7 @@ function mapCliente(raw: ClienteAPI): Cliente {
     email: raw.email,
     imagen: raw.imagen_url ?? undefined,
     activo: raw.activo,
+    cliente_code: raw.cliente_code,
   }
 }
 
@@ -47,31 +48,31 @@ export async function getClienteById(id: string): Promise<Cliente | undefined> {
   return mapCliente(raw)
 }
 
-export async function createCliente(data: Omit<Cliente, "id">): Promise<Cliente> {
-  if (USE_MOCK) {
-    const nuevo: Cliente = { ...data, id: String(Date.now()) }
-    mockClientes.push(nuevo)
-    return nuevo
-  }
+
+export async function createCliente(data: FormData): Promise<Cliente> {
   const raw = await apiFetch<ClienteAPI>("/clientes", {
     method: "POST",
-    body: JSON.stringify(data),
+    body: data,
   })
   return mapCliente(raw)
 }
 
-export async function updateCliente(id: string, data: Partial<Cliente>): Promise<Cliente> {
-  if (USE_MOCK) {
-    const idx = mockClientes.findIndex((c) => c.id === id)
-    if (idx === -1) throw new Error("Cliente no encontrado")
-    mockClientes[idx] = { ...mockClientes[idx], ...data }
-    return mockClientes[idx]
-  }
+
+export async function updateCliente(id: string, data: FormData): Promise<Cliente> {
   const raw = await apiFetch<ClienteAPI>(`/clientes/${encodeURIComponent(id)}`, {
     method: "PUT",
-    body: JSON.stringify(data),
+    body: data,
   })
   return mapCliente(raw)
+}
+// Helper para construir la URL absoluta de imagen
+export function getImageUrl(imagen: string | undefined) {
+  if (!imagen) return ""
+  if (imagen.startsWith("http")) return imagen
+  // Obtener la base URL del backend de variable de entorno pública
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/api\/v1$/, "") || ""
+  if (imagen.startsWith("/uploads")) return `${baseUrl}${imagen}`
+  return imagen
 }
 
 export async function deleteCliente(id: string): Promise<void> {

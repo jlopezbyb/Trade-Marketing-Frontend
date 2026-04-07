@@ -3,6 +3,7 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Edit2, Trash2, Building2, Phone, Mail, MapPin, User } from "lucide-react"
+import { getImageUrl } from "@/lib/services/clientes.service"
 import type { Cliente } from "@/features/clientes/types"
 
 interface ClienteCardProps {
@@ -17,7 +18,7 @@ export function ClienteCard({ cliente, onEdit, onDelete }: ClienteCardProps) {
       <div className="aspect-video relative bg-muted">
         {cliente.imagen ? (
           <img
-            src={cliente.imagen}
+            src={getImageUrl(cliente.imagen)}
             alt={cliente.nombre}
             className="w-full h-full object-cover"
             crossOrigin="anonymous"

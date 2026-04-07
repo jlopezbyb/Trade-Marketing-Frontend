@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
-import { getCategorias } from "@/lib/services/categorias.service"
+import { getCategorias, createCategoria, updateCategoria, deleteCategoria } from "@/lib/services/categorias.service"
+import { toast } from "sonner"
 import type { Categoria } from "@/features/categorias/types"
 
 const emptyForm = {
@@ -46,51 +47,64 @@ export function useCategoriaMaintenance() {
     setIsDialogOpen(true)
   }, [])
 
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     if (!formData.nombre.trim()) return
 
-    if (editingCategoria) {
-      setCategorias((prev) =>
-        prev.map((c) =>
-          c.id === editingCategoria.id
-            ? {
-                ...c,
-                nombre: formData.nombre,
-                descripcion: formData.descripcion,
-                color: formData.color,
-              }
-            : c
-        )
-      )
-    } else {
-      const newCategoria: Categoria = {
-        id: Date.now().toString(),
-        nombre: formData.nombre,
-        descripcion: formData.descripcion,
-        color: formData.color,
-        activo: true,
+    try {
+      if (editingCategoria) {
+        // PUT
+        const updated = await updateCategoria(editingCategoria.id, {
+          nombre: formData.nombre,
+          descripcion: formData.descripcion,
+          color: formData.color,
+        })
+        setCategorias((prev) => prev.map((c) => c.id === updated.id ? updated : c))
+        toast.success("Categoría actualizada correctamente")
+      } else {
+        // POST
+        const nueva = await createCategoria({
+          nombre: formData.nombre,
+          descripcion: formData.descripcion,
+          color: formData.color,
+          activo: true,
+        })
+        setCategorias((prev) => [...prev, nueva])
+        toast.success("Categoría creada correctamente")
       }
-      setCategorias((prev) => [...prev, newCategoria])
+    } catch (e: any) {
+      toast.error("Error al guardar la categoría" + (e?.message ? ": " + e.message : ""))
+      return
     }
-
     setIsDialogOpen(false)
     setFormData(emptyForm)
   }, [formData, editingCategoria])
 
-  const handleToggleActivo = useCallback((id: string) => {
-    setCategorias((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, activo: !c.activo } : c))
-    )
-  }, [])
+  const handleToggleActivo = useCallback(async (id: string) => {
+    const categoria = categorias.find((c) => c.id === id)
+    if (!categoria) return
+    try {
+      const updated = await updateCategoria(id, { activo: !categoria.activo })
+      setCategorias((prev) => prev.map((c) => c.id === id ? updated : c))
+      toast.success("Estado actualizado")
+    } catch (e: any) {
+      toast.error("Error al actualizar estado" + (e?.message ? ": " + e.message : ""))
+    }
+  }, [categorias])
 
   const handleDeleteClick = useCallback((categoria: Categoria) => {
     setCategoriaToDelete(categoria)
     setIsDeleteDialogOpen(true)
   }, [])
 
-  const handleConfirmDelete = useCallback(() => {
+  const handleConfirmDelete = useCallback(async () => {
     if (categoriaToDelete) {
-      setCategorias((prev) => prev.filter((c) => c.id !== categoriaToDelete.id))
+      try {
+        await deleteCategoria(categoriaToDelete.id)
+        setCategorias((prev) => prev.filter((c) => c.id !== categoriaToDelete.id))
+        toast.success("Categoría eliminada")
+      } catch (e: any) {
+        toast.error("Error al eliminar la categoría" + (e?.message ? ": " + e.message : ""))
+      }
     }
     setIsDeleteDialogOpen(false)
     setCategoriaToDelete(null)

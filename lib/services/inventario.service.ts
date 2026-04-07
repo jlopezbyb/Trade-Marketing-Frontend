@@ -17,16 +17,16 @@ interface InventarioAPI {
   lotes?: { id: string; lote: string; cantidad: number; fecha_vencimiento: string }[]
 }
 
-function mapInventario(raw: InventarioAPI): InventarioItem {
+function mapInventario(raw: any): InventarioItem {
   return {
     id: raw.id,
-    clienteId: raw.cliente_id,
-    clienteNombre: raw.cliente_nombre ?? "",
-    productoId: raw.producto_id,
-    productoNombre: raw.producto_nombre ?? "",
+    clienteId: raw.cliente?.id ?? raw.cliente_id ?? "",
+    clienteNombre: raw.cliente?.nombre ?? raw.cliente_nombre ?? "",
+    productoId: raw.producto?.id ?? raw.producto_id ?? "",
+    productoNombre: raw.producto?.nombre ?? raw.producto_nombre ?? "",
     cantidad: raw.cantidad,
     fechaActualizacion: raw.fecha_actualizacion,
-    lotes: raw.lotes?.map((l) => ({
+    lotes: raw.lotes?.map((l: any) => ({
       id: l.id,
       lote: l.lote,
       cantidad: l.cantidad,
@@ -45,27 +45,31 @@ export async function getInventarioActual(): Promise<InventarioItem[]> {
   return res.data.map(mapInventario)
 }
 
-export async function createInventario(data: Omit<InventarioItem, "id">): Promise<InventarioItem> {
+// Nuevo: payload para el endpoint real
+export interface InventarioPayload {
+  cliente_id: number
+  fecha: string
+  items: Array<{
+    producto_id: string
+    cantidad: number
+    lotes: Array<{
+      lote: string
+      cantidad: number
+      fecha_vencimiento: string
+    }>
+  }>
+}
+
+export async function createInventario(payload: InventarioPayload): Promise<void> {
   if (USE_MOCK) {
-    const nuevo: InventarioItem = { ...data, id: String(Date.now()) }
-    mockInventarioActual.push(nuevo)
-    return nuevo
+    // Simulación: no hace nada
+    return
   }
-  const raw = await apiFetch<InventarioAPI>("/inventario", {
+  await apiFetch<void>("/inventario", {
     method: "POST",
-    body: JSON.stringify({
-      cliente_id: data.clienteId,
-      producto_id: data.productoId,
-      cantidad: data.cantidad,
-      fecha_actualizacion: data.fechaActualizacion,
-      lotes: data.lotes?.map((l) => ({
-        lote: l.lote,
-        cantidad: l.cantidad,
-        fecha_vencimiento: l.fechaVencimiento,
-      })),
-    }),
+    body: JSON.stringify(payload),
+    headers: { "Content-Type": "application/json" },
   })
-  return mapInventario(raw)
 }
 
 export async function updateInventario(id: string, data: Partial<InventarioItem>): Promise<InventarioItem> {

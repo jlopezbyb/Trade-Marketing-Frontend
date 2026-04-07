@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { ArrowLeft, Plus, Search, Building2 } from "lucide-react"
 import { useClienteMaintenance } from "../hooks/useClienteMaintenance"
+import { getImageUrl } from "@/lib/services/clientes.service"
 import { ClienteCard } from "./cliente-card"
 import { ClienteFormDialog } from "./cliente-form-dialog"
 
@@ -46,6 +47,7 @@ export function MantenimientoClientes({ onBack }: MantenimientoClientesProps) {
     handleDeleteClick,
     handleConfirmDelete,
     handleReactivate,
+    loading
   } = useClienteMaintenance()
 
   return (
@@ -105,7 +107,7 @@ export function MantenimientoClientes({ onBack }: MantenimientoClientesProps) {
                 <div className="aspect-video relative bg-muted">
                   {cliente.imagen ? (
                     <img
-                      src={cliente.imagen}
+                      src={getImageUrl(cliente.imagen)}
                       alt={cliente.nombre}
                       className="w-full h-full object-cover grayscale"
                       crossOrigin="anonymous"
@@ -146,6 +148,7 @@ export function MantenimientoClientes({ onBack }: MantenimientoClientesProps) {
         onDrop={handleDrop}
         onClose={handleCloseDialog}
         onSubmit={handleSubmit}
+        loading={loading}
       />
 
       {/* Delete Confirmation Dialog */}

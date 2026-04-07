@@ -20,30 +20,23 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { ImagePlus } from "lucide-react"
-import type { Producto } from "@/features/productos/types"
 
-const categorias = [
-  "Aceites",
-  "Granos",
-  "Endulzantes",
-  "Harinas",
-  "Condimentos",
-  "Aderezos",
-  "Enlatados",
-  "Lácteos",
-  "Bebidas",
-  "Otros",
-]
+
+
+import type { Producto } from "@/features/productos/types"
+import { getProductoImageUrl } from "@/lib/services/productos.service"
+
 
 const unidades = ["Piezas", "Cajas", "Paquetes", "Kilos", "Litros"]
 
 interface ProductoFormData {
   nombre: string
   sku: string
-  categoria: string
+  categoriaId: string // id numérico como string
   unidad: string
   activo: boolean
   imagen: string
+  imageFile: File | null
 }
 
 interface ProductoFormDialogProps {
@@ -55,6 +48,7 @@ interface ProductoFormDialogProps {
   fileInputRef: React.RefObject<HTMLInputElement | null>
   onSave: () => void
   onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
+  categorias: { id: string; nombre: string }[]
 }
 
 export function ProductoFormDialog({
@@ -66,6 +60,7 @@ export function ProductoFormDialog({
   fileInputRef,
   onSave,
   onImageUpload,
+  categorias,
 }: ProductoFormDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -92,7 +87,7 @@ export function ProductoFormDialog({
               {formData.imagen ? (
                 <div className="relative aspect-square max-w-[200px] mx-auto">
                   <img
-                    src={formData.imagen}
+                    src={getProductoImageUrl(formData.imagen)}
                     alt="Preview"
                     className="w-full h-full object-cover rounded-lg"
                     crossOrigin="anonymous"
@@ -103,7 +98,7 @@ export function ProductoFormDialog({
                     className="absolute bottom-2 right-2"
                     onClick={(e) => {
                       e.stopPropagation()
-                      setFormData({ ...formData, imagen: "" })
+                      setFormData({ ...formData, imagen: "", imageFile: null })
                     }}
                   >
                     Cambiar
@@ -161,9 +156,9 @@ export function ProductoFormDialog({
             <div className="space-y-2">
               <Label>Categoría</Label>
               <Select
-                value={formData.categoria}
+                value={formData.categoriaId}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, categoria: value })
+                  setFormData({ ...formData, categoriaId: value })
                 }
               >
                 <SelectTrigger>
@@ -171,8 +166,8 @@ export function ProductoFormDialog({
                 </SelectTrigger>
                 <SelectContent>
                   {categorias.map((cat) => (
-                    <SelectItem key={cat} value={cat}>
-                      {cat}
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.nombre}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -7,8 +7,9 @@ const emptyForm = {
   nombre: "",
   sku: "",
   unidad: "Piezas",
-  categoria: "",
+  categoriaId: "", // id numérico como string
   imagen: "",
+  imageFile: null as File | null,
   activo: true,
 }
 
@@ -22,7 +23,6 @@ export function useProductoMaintenance() {
   const [productToDelete, setProductToDelete] = useState<Producto | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [formData, setFormData] = useState(emptyForm)
-  const [file, setFile] = useState<File | null>(null)
 
   useEffect(() => {
     getProductos().then(setProductos)
@@ -44,8 +44,9 @@ export function useProductoMaintenance() {
         nombre: producto.nombre,
         sku: producto.sku,
         unidad: producto.unidad,
-        categoria: producto.categoria || "",
+        categoriaId: producto.categoriaId || "", // requiere que Producto tenga categoriaId
         imagen: producto.imagen || "",
+        imageFile: null,
         activo: producto.activo,
       })
     } else {
@@ -63,12 +64,17 @@ export function useProductoMaintenance() {
     data.append("nombre", formData.nombre)
     data.append("sku", formData.sku)
     data.append("unidad", formData.unidad)
-    data.append("categoria_id", formData.categoria || "")
-    data.append("activo", formData.activo ? "true" : "false")
-    if (file) data.append("imagen", file)
+    // categoria_id debe ser numérico
+    if (formData.categoriaId) {
+      data.append("categoria_id", String(Number(formData.categoriaId)))
+    }
+    // Solo enviar image si hay archivo
+    if (formData.imageFile) {
+      data.append("image", formData.imageFile)
+    }
 
     try {
-      let producto
+      let producto: Producto
       if (editingProduct) {
         producto = await updateProducto(editingProduct.id, data, true)
         setProductos((prev) => prev.map((p) => p.id === producto.id ? producto : p))
@@ -83,17 +89,24 @@ export function useProductoMaintenance() {
       return
     }
     setIsDialogOpen(false)
-    setFile(null)
-  }, [formData, editingProduct, file])
+    setFormData((prev) => ({ ...prev, imageFile: null }))
+  }, [formData, editingProduct])
 
   const handleDeleteClick = useCallback((producto: Producto) => {
     setProductToDelete(producto)
     setIsDeleteDialogOpen(true)
   }, [])
 
-  const handleDelete = useCallback(() => {
+  const handleDelete = useCallback(async () => {
     if (productToDelete) {
-      setProductos((prev) => prev.filter((p) => p.id !== productToDelete.id))
+      try {
+        // Llama al endpoint real
+        await import("@/lib/services/productos.service").then(mod => mod.deleteProducto(productToDelete.id))
+        setProductos((prev) => prev.filter((p) => p.id !== productToDelete.id))
+        toast.success("Producto eliminado correctamente")
+      } catch (e: any) {
+        toast.error("Error al eliminar el producto" + (e?.message ? ": " + e.message : ""))
+      }
       setIsDeleteDialogOpen(false)
       setProductToDelete(null)
     }
@@ -102,7 +115,7 @@ export function useProductoMaintenance() {
   const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      setFile(file)
+      setFormData((prev) => ({ ...prev, imageFile: file }))
       const reader = new FileReader()
       reader.onloadend = () => {
         setFormData((prev) => ({ ...prev, imagen: reader.result as string }))

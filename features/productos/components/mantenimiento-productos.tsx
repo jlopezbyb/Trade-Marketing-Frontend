@@ -20,25 +20,16 @@ import {
 } from "@/components/ui/select"
 import { ArrowLeft, Plus, Search, Package } from "lucide-react"
 import { useProductoMaintenance } from "../hooks/useProductoMaintenance"
+import { useEffect, useState } from "react"
+import { getCategorias } from "@/lib/services/categorias.service"
+import type { Categoria } from "@/lib/types"
 import { ProductoCard } from "./producto-card"
 import { ProductoFormDialog } from "./producto-form-dialog"
+
 
 interface MantenimientoProductosProps {
   onBack?: () => void
 }
-
-const categorias = [
-  "Aceites",
-  "Granos",
-  "Endulzantes",
-  "Harinas",
-  "Condimentos",
-  "Aderezos",
-  "Enlatados",
-  "Lácteos",
-  "Bebidas",
-  "Otros",
-]
 
 export function MantenimientoProductos({ onBack }: MantenimientoProductosProps) {
   const {
@@ -64,6 +55,12 @@ export function MantenimientoProductos({ onBack }: MantenimientoProductosProps) 
     handleImageUpload,
     toggleActivo,
   } = useProductoMaintenance()
+
+  // Estado para categorías
+  const [categorias, setCategorias] = useState<Categoria[]>([])
+  useEffect(() => {
+    getCategorias().then(setCategorias)
+  }, [])
 
   return (
     <div className="p-4 space-y-4">
@@ -103,8 +100,8 @@ export function MantenimientoProductos({ onBack }: MantenimientoProductosProps) 
           <SelectContent>
             <SelectItem value="all">Todas</SelectItem>
             {categorias.map((cat) => (
-              <SelectItem key={cat} value={cat}>
-                {cat}
+              <SelectItem key={cat.id} value={cat.id}>
+                {cat.nombre}
               </SelectItem>
             ))}
           </SelectContent>
@@ -143,6 +140,7 @@ export function MantenimientoProductos({ onBack }: MantenimientoProductosProps) 
         fileInputRef={fileInputRef}
         onSave={handleSave}
         onImageUpload={handleImageUpload}
+        categorias={categorias}
       />
 
       {/* Dialog Confirmar Eliminación */}
