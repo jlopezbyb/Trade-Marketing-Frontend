@@ -31,7 +31,7 @@ export function ReporteVencimientos() {
     productosFiltrados,
     countByEstado,
     getEstadoConfig,
-    exportToCSV,
+    exportToXLSX,
   } = useReporteVencimientos()
 
   return (
@@ -44,9 +44,9 @@ export function ReporteVencimientos() {
             Control de fechas de vencimiento por cliente y producto
           </p>
         </div>
-        <Button onClick={exportToCSV}>
+        <Button onClick={exportToXLSX}>
           <Download className="h-4 w-4 mr-2" />
-          Exportar CSV
+          Exportar Excel
         </Button>
       </div>
 

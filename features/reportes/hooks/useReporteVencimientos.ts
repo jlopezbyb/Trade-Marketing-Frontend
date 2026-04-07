@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react"
+import * as XLSX from "xlsx"
 import { getProductosPorVencer } from "@/lib/services/reportes.service"
 import { getClientes } from "@/lib/services/clientes.service"
 import type { ProductoPorVencer } from "@/features/reportes/types"
@@ -65,7 +66,7 @@ export function useReporteVencimientos() {
     }
   }, [])
 
-  const exportToCSV = useCallback(() => {
+  const exportToXLSX = useCallback(() => {
     const headers = [
       "Cliente",
       "Producto",
@@ -84,13 +85,10 @@ export function useReporteVencimientos() {
       p.diasParaVencer,
       p.estado,
     ])
-
-    const csvContent = [headers, ...rows].map((row) => row.join(",")).join("\n")
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
-    const link = document.createElement("a")
-    link.href = URL.createObjectURL(blob)
-    link.download = `reporte-vencimientos-${new Date().toISOString().split("T")[0]}.csv`
-    link.click()
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows])
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Vencimientos")
+    XLSX.writeFile(workbook, `reporte-vencimientos-${new Date().toISOString().split("T")[0]}.xlsx`)
   }, [productosFiltrados])
 
   return {
@@ -103,6 +101,6 @@ export function useReporteVencimientos() {
     productosFiltrados,
     countByEstado,
     getEstadoConfig,
-    exportToCSV,
+    exportToXLSX,
   }
 }

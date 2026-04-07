@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Search, Package, Calendar, Filter } from "lucide-react"
+import { ArrowLeft, Search, Package, Calendar, Filter, Download } from "lucide-react"
 import { useInventarioActual } from "../hooks/useInventarioActual"
 
 interface InventarioActualProps {
@@ -24,6 +24,7 @@ export function InventarioActual({ onBack }: InventarioActualProps) {
     clientes,
     productos,
     filteredInventario,
+    exportToXLSX,
   } = useInventarioActual()
 
   return (
@@ -43,6 +44,14 @@ export function InventarioActual({ onBack }: InventarioActualProps) {
         </div>
 
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            className="h-12 gap-2"
+            onClick={exportToXLSX}
+          >
+            <Download className="h-5 w-5" />
+            <span className="hidden sm:inline">Exportar Excel</span>
+          </Button>
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input

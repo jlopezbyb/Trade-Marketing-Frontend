@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react"
+import * as XLSX from "xlsx"
 import { getInventarioEstancado } from "@/lib/services/reportes.service"
 import type { InventarioEstancado } from "@/features/reportes/types"
 
@@ -14,24 +15,19 @@ export function useReporteEstancado() {
     (item) => item.diasSinCambio >= parseInt(diasFilter)
   )
 
-  const handleExportCSV = useCallback(() => {
+  const handleExportXLSX = useCallback(() => {
     const headers = ["Cliente", "Producto", "Cantidad", "Última Actualización", "Días Sin Cambio"]
     const rows = filteredInventario.map((item) => [
       item.clienteNombre,
       item.productoNombre,
-      item.cantidad.toString(),
+      item.cantidad,
       item.fechaActualizacion,
-      item.diasSinCambio.toString(),
+      item.diasSinCambio,
     ])
-
-    const csv = [headers.join(","), ...rows.map((row) => row.join(","))].join("\n")
-    const blob = new Blob([csv], { type: "text/csv" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `inventario-estancado-${new Date().toISOString().split("T")[0]}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows])
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Inventario Estancado")
+    XLSX.writeFile(workbook, `inventario-estancado-${new Date().toISOString().split("T")[0]}.xlsx`)
   }, [filteredInventario])
 
   return {
@@ -39,6 +35,6 @@ export function useReporteEstancado() {
     setDiasFilter,
     estancados,
     filteredInventario,
-    handleExportCSV,
+    handleExportXLSX,
   }
 }

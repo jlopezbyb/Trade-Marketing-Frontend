@@ -17,7 +17,7 @@ interface EstancadoAPI {
   dias_sin_cambio: number
 }
 
-function mapEstancado(raw: EstancadoAPI): InventarioEstancado {
+function mapEstancado(raw: any): InventarioEstancado {
   return {
     id: raw.id,
     clienteId: raw.cliente_id,
@@ -26,7 +26,7 @@ function mapEstancado(raw: EstancadoAPI): InventarioEstancado {
     productoNombre: raw.producto_nombre ?? "",
     cantidad: raw.cantidad,
     fechaActualizacion: raw.fecha_actualizacion,
-    diasSinCambio: raw.dias_sin_cambio,
+    diasSinCambio: raw.dias_sin_cambio ?? raw.dias_sin_movimiento ?? 0,
   }
 }
 

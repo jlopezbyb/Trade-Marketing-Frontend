@@ -51,11 +51,11 @@ export async function createVisita(data: Omit<Visita, "id">): Promise<Visita> {
   const raw = await apiFetch<VisitaAPI>("/visitas", {
     method: "POST",
     body: JSON.stringify({
-      cliente_id: data.clienteId,
+      cliente_id: Number(data.clienteId),
       cliente_nombre: data.clienteNombre,
       fecha: data.fecha,
       observaciones: data.observaciones,
-      usuario_id: data.usuarioId,
+      usuario_id: Number(data.usuarioId),
     }),
   })
   return mapVisita(raw)

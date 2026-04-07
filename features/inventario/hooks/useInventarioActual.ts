@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
+import * as XLSX from "xlsx"
 import { getInventarioActual } from "@/lib/services/inventario.service"
 import { getClientes } from "@/lib/services/clientes.service"
 import { getProductos } from "@/lib/services/productos.service"
@@ -30,6 +31,20 @@ export function useInventarioActual() {
     return matchesSearch && matchesCliente && matchesProducto
   })
 
+  const exportToXLSX = useCallback(() => {
+    const headers = ["Cliente", "Producto", "Cantidad", "Fecha"]
+    const rows = filteredInventario.map((item) => [
+      item.clienteNombre,
+      item.productoNombre,
+      item.cantidad,
+      item.fechaActualizacion,
+    ])
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows])
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Inventario Actual")
+    XLSX.writeFile(workbook, `inventario-actual-${new Date().toISOString().split("T")[0]}.xlsx`)
+  }, [filteredInventario])
+
   return {
     search,
     setSearch,
@@ -43,5 +58,6 @@ export function useInventarioActual() {
     clientes,
     productos,
     filteredInventario,
+    exportToXLSX,
   }
 }

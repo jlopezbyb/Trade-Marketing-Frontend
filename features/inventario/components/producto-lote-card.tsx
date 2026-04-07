@@ -5,20 +5,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Plus, Trash2, CalendarIcon } from "lucide-react"
-
-interface Lote {
-  id: string
-  lote: string
-  cantidad: number
-  fechaVencimiento: string
-}
+import type { LoteInventario } from "@/features/inventario/types"
 
 interface ProductoConLotes {
   productoId: string
   productoNombre: string
   sku: string
   unidad: string
-  lotes: Lote[]
+  lotes: LoteInventario[]
 }
 
 interface ProductoLoteCardProps {
@@ -27,7 +21,12 @@ interface ProductoLoteCardProps {
   onEliminarProducto: (productoId: string) => void
   onAgregarLote: (productoId: string) => void
   onEliminarLote: (productoId: string, loteId: string) => void
-  onActualizarLote: (productoId: string, loteId: string, field: string, value: string | number) => void
+  onActualizarLote: (
+    productoId: string,
+    loteId: string,
+    campo: keyof LoteInventario,
+    value: string | number
+  ) => void
 }
 
 export function ProductoLoteCard({

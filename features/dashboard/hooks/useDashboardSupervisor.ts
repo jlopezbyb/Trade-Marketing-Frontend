@@ -1,6 +1,8 @@
 import { useRef, useCallback, useState, useEffect } from "react"
-import { getProductosPorVencer } from "@/lib/services/reportes.service"
+import { getProductosPorVencer, getDashboardSummary } from "@/lib/services/reportes.service"
+import { getInventarioActual } from "@/lib/services/inventario.service"
 import { getClientes } from "@/lib/services/clientes.service"
+import { getVisitas } from "@/lib/services/visitas.service"
 import type { ProductoPorVencer } from "@/features/reportes/types"
 import type { Cliente } from "@/features/clientes/types"
 
@@ -10,19 +12,107 @@ export function useDashboardSupervisor() {
   const chartRef3 = useRef<HTMLDivElement>(null)
   const [porVencer, setPorVencer] = useState<ProductoPorVencer[]>([])
   const [clientesList, setClientesList] = useState<Cliente[]>([])
+  const [summaryData, setSummaryData] = useState({
+    clientesHoy: 0,
+    visitasSemana: 0,
+    cambioVisitas: 0,
+    productosEstancados: 0,
+    totalInventario: 0,
+  })
+  const [inventarioPorProducto, setInventarioPorProducto] = useState<{ nombre: string; cantidad: number }[]>([])
+  const [tendenciaVisitas, setTendenciaVisitas] = useState<{ semana: string; visitas: number; inventario: number }[]>([])
+  const [visitasPorDia, setVisitasPorDia] = useState<{ dia: string; visitas: number }[]>([])
 
   useEffect(() => {
     getProductosPorVencer().then(setPorVencer)
     getClientes().then(setClientesList)
+    getDashboardSummary().then((res) => {
+      setSummaryData({
+        clientesHoy: res.totalClientes ?? 0,
+        // visitasSemana y cambioVisitas se calculan a partir de getVisitas()
+        visitasSemana: 0,
+        cambioVisitas: 0,
+        productosEstancados: res.inventarioEstancado ?? 0,
+        totalInventario: res.totalInventario ?? 0,
+      })
+    })
+    getInventarioActual().then((items) => {
+      // Agrupar por productoNombre y sumar cantidades
+      const map = new Map<string, number>()
+      items.forEach((item) => {
+        map.set(item.productoNombre, (map.get(item.productoNombre) || 0) + item.cantidad)
+      })
+      setInventarioPorProducto(Array.from(map.entries()).map(([nombre, cantidad]) => ({ nombre, cantidad })))
+      // Agrupar inventario por semana (usando fechaActualizacion)
+      const inventarioPorSemana = new Map<string, number>()
+      items.forEach((item) => {
+        const week = getWeekLabel(item.fechaActualizacion)
+        inventarioPorSemana.set(week, (inventarioPorSemana.get(week) || 0) + item.cantidad)
+      })
+      // Consultar visitas y agrupar por semana
+      getVisitas().then((visitas) => {
+        // Agrupar por semana para tendencia
+        const visitasPorSemana = new Map<string, number>()
+        visitas.forEach((v) => {
+          const week = getWeekLabel(v.fecha)
+          visitasPorSemana.set(week, (visitasPorSemana.get(week) || 0) + 1)
+        })
+        // Calcular visitas de la semana actual y variación vs semana anterior
+        const semanasOrdenadas = Array.from(visitasPorSemana.keys()).sort()
+        const semanaActualKey = semanasOrdenadas[semanasOrdenadas.length - 1]
+        const semanaAnteriorKey = semanasOrdenadas.length > 1 ? semanasOrdenadas[semanasOrdenadas.length - 2] : undefined
+
+        const visitasSemanaActual = semanaActualKey ? visitasPorSemana.get(semanaActualKey) || 0 : 0
+        const visitasSemanaAnterior = semanaAnteriorKey ? visitasPorSemana.get(semanaAnteriorKey) || 0 : 0
+
+        const cambioVisitas =
+          visitasSemanaAnterior > 0
+            ? Math.round((visitasSemanaActual / visitasSemanaAnterior) * 100 - 100)
+            : 0
+
+        setSummaryData((prev) => ({
+          ...prev,
+          visitasSemana: visitasSemanaActual,
+          cambioVisitas,
+        }))
+        // Unir ambas series por semana
+        const allWeeks = Array.from(new Set([...Array.from(inventarioPorSemana.keys()), ...Array.from(visitasPorSemana.keys())]))
+        allWeeks.sort()
+        setTendenciaVisitas(
+          allWeeks.map((semana) => ({
+            semana,
+            visitas: visitasPorSemana.get(semana) || 0,
+            inventario: inventarioPorSemana.get(semana) || 0,
+          }))
+        )
+        // Agrupar por día de la semana para visitasPorDia
+        const dias = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"]
+        const visitasPorDiaMap = new Map<string, number>()
+        visitas.forEach((v) => {
+          const d = new Date(v.fecha)
+          const dia = dias[d.getDay()]
+          visitasPorDiaMap.set(dia, (visitasPorDiaMap.get(dia) || 0) + 1)
+        })
+        // Ordenar por semana laboral (Lun-Dom)
+        const orderedDias = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
+        setVisitasPorDia(
+          orderedDias.map((dia) => ({ dia, visitas: visitasPorDiaMap.get(dia) || 0 }))
+        )
+      })
+    })
   }, [])
 
-  const summaryData = {
-    clientesHoy: 8,
-    productosEstancados: 2,
-    totalInventario: 156,
-    visitasSemana: 61,
-    cambioVisitas: 27,
+  // Utilidad para obtener etiqueta de semana a partir de fecha (YYYY-MM-DD)
+  function getWeekLabel(fecha: string): string {
+    const d = new Date(fecha)
+    const year = d.getFullYear()
+    const firstDay = new Date(d.getFullYear(), 0, 1)
+    const dayOfYear = Math.floor((d.getTime() - firstDay.getTime()) / (1000 * 60 * 60 * 24)) + 1
+    const week = Math.ceil(dayOfYear / 7)
+    return `Sem ${week}`
   }
+
+  // summaryData ahora viene del estado y se actualiza con el endpoint
 
   const vencimientosPorCliente = clientesList
     .filter((c) => c.activo)
@@ -118,6 +208,9 @@ export function useDashboardSupervisor() {
     clientesList,
     summaryData,
     vencimientosPorCliente,
+    inventarioPorProducto,
+    tendenciaVisitas,
+    visitasPorDia,
     downloadChart,
   }
 }

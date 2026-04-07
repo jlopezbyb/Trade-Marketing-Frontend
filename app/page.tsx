@@ -15,8 +15,12 @@ import { MantenimientoClientes } from "@/features/clientes"
 import { MantenimientoCategorias } from "@/features/categorias"
 import { GestionUsuarios } from "@/features/usuarios"
 
+// import { useEffect } from "react"
+// import { useRouter } from "next/navigation"
+
 function AppContent() {
   const { user, isRestoring } = useAuth()
+  // const router = useRouter()
   const {
     currentPage,
     selectedCliente,
@@ -27,18 +31,9 @@ function AppContent() {
     backToDashboard,
   } = useAppRouter()
 
-  if (isRestoring) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <span className="text-lg text-muted-foreground">Cargando sesión...</span>
-      </div>
-    )
-  }
-  if (!user) {
-    return <LoginForm onSuccess={() => {}} />
-  }
-
   const renderPage = () => {
+    if (!user) return null
+
     switch (currentPage) {
       case "clientes":
         return (
@@ -89,20 +84,38 @@ function AppContent() {
       case "reporte-vencimientos":
         return <ReporteVencimientos />
       case "mantenimiento-productos":
-        return <MantenimientoProductos onBack={user.role === "field" ? backToDashboard : undefined} />
+        return (
+          <MantenimientoProductos onBack={user.role === "field" ? backToDashboard : undefined} />
+        )
       case "mantenimiento-clientes":
-        return <MantenimientoClientes onBack={user.role === "field" ? backToDashboard : undefined} />
+        return (
+          <MantenimientoClientes onBack={user.role === "field" ? backToDashboard : undefined} />
+        )
       case "mantenimiento-categorias":
-        return <MantenimientoCategorias onBack={user.role === "field" ? backToDashboard : undefined} />
+        return (
+          <MantenimientoCategorias onBack={user.role === "field" ? backToDashboard : undefined} />
+        )
       case "gestion-usuarios":
         return <GestionUsuarios />
       default:
+        // Página "dashboard" — renderizar según el rol
         return user.role === "field" ? (
           <DashboardField onNavigate={navigate} />
         ) : (
           <DashboardSupervisor onNavigate={navigate} />
         )
     }
+  }
+
+  if (isRestoring) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <span className="text-lg text-muted-foreground">Cargando sesión...</span>
+      </div>
+    )
+  }
+  if (!user) {
+    return <LoginForm onSuccess={() => {}} />
   }
 
   // Supervisor layout with sidebar

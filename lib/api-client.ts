@@ -67,7 +67,9 @@ interface MeRawResponse {
   id: string
   email: string
   nombre: string
-  rol: "field" | "supervisor"
+  // Algunos backends usan 'rol', otros 'role'; soportamos ambos
+  rol?: string | null
+  role?: string | null
   activo: boolean
   imagen_url?: string | null
   clientes_asignados?: string[]
@@ -99,11 +101,13 @@ export async function loginWithEntra(entraAccessToken: string): Promise<AuthResp
 /** Obtener usuario autenticado — GET /auth/me */
 export async function getMe(): Promise<MeResponse> {
   const raw = await apiFetch<MeRawResponse>("/auth/me")
+  const rawRole = (raw.rol ?? raw.role ?? "field").toString().toLowerCase()
+  const mappedRole: "field" | "supervisor" = rawRole === "supervisor" ? "supervisor" : "field"
   return {
     id: raw.id,
     email: raw.email,
     name: raw.nombre,
-    role: raw.rol === "supervisor" ? "supervisor" : "field",
+    role: mappedRole,
     activo: raw.activo,
     clientesAsignados: raw.clientes_asignados,
     imagen: raw.imagen_url ?? undefined,

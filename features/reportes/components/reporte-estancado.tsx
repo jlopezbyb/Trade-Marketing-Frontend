@@ -15,7 +15,7 @@ export function ReporteEstancado({ onBack }: ReporteEstancadoProps) {
     diasFilter,
     setDiasFilter,
     filteredInventario,
-    handleExportCSV,
+    handleExportXLSX,
   } = useReporteEstancado()
 
   return (
@@ -49,10 +49,10 @@ export function ReporteEstancado({ onBack }: ReporteEstancadoProps) {
           <Button 
             variant="outline" 
             className="h-12 gap-2"
-            onClick={handleExportCSV}
+            onClick={handleExportXLSX}
           >
             <Download className="h-5 w-5" />
-            <span className="hidden sm:inline">Exportar CSV</span>
+            <span className="hidden sm:inline">Exportar Excel</span>
           </Button>
         </div>
       </div>

@@ -1,6 +1,14 @@
 "use client"
 
 import { useState } from "react"
+import { useAuth } from "@/lib/auth-context"
+import { getMe } from "@/lib/api-client"
+// Utilidad para leer cookies
+function getCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+import { createVisita } from "@/lib/services/visitas.service"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -16,24 +24,38 @@ interface RegistrarVisitaProps {
   onContinue: (visitaId: string) => void
 }
 
+
 export function RegistrarVisita({ cliente, onBack, onContinue }: RegistrarVisitaProps) {
+  const { user } = useAuth()
   const [fecha, setFecha] = useState(new Date().toISOString().split("T")[0])
   const [observaciones, setObservaciones] = useState("")
   const [success, setSuccess] = useState(false)
   const [visitaId, setVisitaId] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    
-    // Generate mock visita ID
-    const newVisitaId = `visita-${Date.now()}`
-    setVisitaId(newVisitaId)
-    setSuccess(true)
+    setError(null)
+    try {
+      const me = await getMe()
+      const usuarioId = me?.id ? String(me.id) : undefined
+      if (!usuarioId || usuarioId === "0" || isNaN(Number(usuarioId))) {
+        setError("No se encontró un id de usuario válido (auth/me).")
+        return
+      }
+      const visita = await createVisita({
+        clienteId: cliente.id,
+        clienteNombre: cliente.nombre,
+        fecha,
+        observaciones,
+        usuarioId,
+      })
+      setVisitaId(visita.id)
+      setSuccess(true)
+    } catch (err) {
+      setError("Error al registrar la visita. Intenta de nuevo.")
+    }
   }
-
   if (success && visitaId) {
     return (
       <div className="p-4 space-y-6">
@@ -106,6 +128,15 @@ export function RegistrarVisita({ cliente, onBack, onContinue }: RegistrarVisita
           </div>
         </CardContent>
       </Card>
+
+      {/* Error message */}
+      {error && (
+        <Alert className="border-destructive bg-destructive/10">
+          <AlertDescription className="text-base text-destructive">
+            {error}
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Visit Form */}
       <form onSubmit={handleSubmit} className="space-y-4">

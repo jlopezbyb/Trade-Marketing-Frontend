@@ -61,7 +61,10 @@ interface DashboardChartsProps {
   downloadChart: (ref: React.RefObject<HTMLDivElement | null>, fileName: string) => void
 }
 
+import { useDashboardSupervisor } from "../hooks/useDashboardSupervisor"
+
 export function DashboardCharts({ chartRef1, chartRef2, chartRef3, downloadChart }: DashboardChartsProps) {
+  const { inventarioPorProducto, tendenciaVisitas, visitasPorDia } = useDashboardSupervisor()
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       {/* Visitas por Dia */}
@@ -69,8 +72,8 @@ export function DashboardCharts({ chartRef1, chartRef2, chartRef3, downloadChart
         <CardHeader className="pb-2 border-b-2 border-gold/30">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-base">Visitas por Dia</CardTitle>
-              <CardDescription className="text-xs">Distribucion semanal de visitas</CardDescription>
+              <CardTitle className="text-base">Visitas por Día</CardTitle>
+              <CardDescription className="text-xs">Distribución semanal de visitas</CardDescription>
             </div>
             <Button
               variant="ghost"
@@ -89,7 +92,7 @@ export function DashboardCharts({ chartRef1, chartRef2, chartRef3, downloadChart
               <BarChart data={visitasPorDia}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis dataKey="dia" tick={{ fontSize: 12, fill: "#6b7280" }} />
-                <YAxis tick={{ fontSize: 12, fill: "#6b7280" }} />
+                <YAxis tick={{ fontSize: 12, fill: "#6b7280" }} allowDecimals={false} />
                 <Tooltip contentStyle={tooltipStyle} />
                 <Bar dataKey="visitas" fill="#007e2e" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -133,7 +136,7 @@ export function DashboardCharts({ chartRef1, chartRef2, chartRef3, downloadChart
                   labelLine={false}
                 >
                   {inventarioPorProducto.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={pieColors[index]} />
+                    <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
                   ))}
                 </Pie>
                 <Tooltip

@@ -14,7 +14,7 @@ import {
   InteractionStatus,
   type AuthenticationResult,
 } from "@azure/msal-browser"
-import type { User } from "./types"
+import type { User, UserRole } from "./types"
 import { mockUsers } from "./mock-data"
 import { getMsalInstance, isMsalConfigured, loginRequest, msalRedirectResult } from "./msal-config"
 import {
@@ -52,6 +52,8 @@ function deleteCookie(name: string) {
 interface AuthContextType {
   user: User | null
   isLoading: boolean
+  /** Indica si se está restaurando la sesión inicial */
+  isRestoring: boolean
   /** Login con credenciales locales (admin) — mock en dev, API en prod */
   login: (email: string, password: string) => Promise<boolean>
   /** Login con Microsoft Entra ID (redirect). El rol se determina por el JWT del backend. */
@@ -80,6 +82,15 @@ function decodeJwtPayload(token: string): { exp?: number } | null {
   }
 }
 
+/** Normaliza el rol que viene del backend/JWT a nuestro union type */
+function normalizeRole(raw: unknown): UserRole {
+  if (!raw) return "field"
+  const value = String(raw).toLowerCase()
+  if (value === "supervisor") return "supervisor"
+  // Cualquier otro valor lo tratamos como "field" por defecto
+  return "field"
+}
+
 // ---------------------------------------------------------------------------
 // Mock passwords (desarrollo — se usa cuando el backend aún no está conectado)
 // ---------------------------------------------------------------------------
@@ -98,6 +109,7 @@ const mockPasswords: Record<string, string> = {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  // Estado interno para token y refresh_token, pero no se usan cookies "backendToken" ni "refreshToken"
   const [backendToken, setBackendToken] = useState<string | null>(null)
   const [refreshToken, setRefreshToken] = useState<string | null>(null)
   const [msalReady, setMsalReady] = useState(false)
@@ -123,6 +135,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setBackendToken(res.token)
         setRefreshToken(res.refreshToken)
         setAuthToken(res.token)
+        // Guardar nuevos tokens en cookies unificadas
+        const payload = decodeJwtPayload(res.token)
+        if (payload?.exp) {
+          setCookie("token", res.token, new Date(payload.exp * 1000))
+        } else {
+          setCookie("token", res.token)
+        }
+        if (res.refreshToken) {
+          setCookie("refresh_token", res.refreshToken)
+        }
         scheduleRefresh(res.token)
       } catch {
         // Si falla el refresh, cerrar sesión
@@ -130,6 +152,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setBackendToken(null)
         setRefreshToken(null)
         setAuthToken(null)
+        deleteCookie("token")
+        deleteCookie("refresh_token")
       }
     }, expiresInMs)
   }, [])
@@ -147,83 +171,123 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setBackendToken(res.token)
       setRefreshToken(res.refreshToken)
       setAuthToken(res.token)
-      // Guardar token en cookie (expiración igual a la del JWT)
+      // Guardar token y refresh_token en cookies (expiración igual a la del JWT)
       const payload = decodeJwtPayload(res.token)
       if (payload?.exp) {
-        setCookie("backendToken", res.token, new Date(payload.exp * 1000))
+        setCookie("token", res.token, new Date(payload.exp * 1000))
       } else {
-        setCookie("backendToken", res.token)
+        setCookie("token", res.token)
+      }
+      if (res.refreshToken) {
+        setCookie("refresh_token", res.refreshToken)
       }
       scheduleRefresh(res.token)
 
       try {
         const me = await getMe()
-        setUser({
+        const userObj: User = {
           id: me.id,
           email: me.email,
           name: me.name,
-          role: me.role,
+          role: normalizeRole(me.role),
           activo: me.activo,
           clientesAsignados: me.clientesAsignados,
           imagen: me.imagen,
-        })
+        }
+        setUser(userObj)
+        // eslint-disable-next-line no-console
+        console.log("[AUTH] setUser (handleAuthResponse/getMe):", userObj)
       } catch {
         // Fallback: leer datos del JWT
         const payload = decodeJwtPayload(res.token) as Record<string, unknown> | null
-        setUser({
-          id: (payload?.sub as string) ?? "",
-          email: (payload?.email as string) ?? "",
-          name: (payload?.name as string) ?? "",
-          role: payload?.role === "supervisor" ? "supervisor" : "field",
+        const role = normalizeRole(payload?.role ?? payload?.type)
+        // Debug: imprimir payload y rol detectado
+        // eslint-disable-next-line no-console
+        console.log("[AUTH] Payload JWT restaurado (token):", payload)
+        // eslint-disable-next-line no-console
+        console.log("[AUTH] Rol detectado (token):", role)
+        const userObj: User = {
+          id: (payload?.id as string) ?? (payload?.sub as string) ?? "",
+          email: (payload?.user as string) ?? (payload?.email as string) ?? "",
+          name: (payload?.nombre as string) ?? (payload?.name as string) ?? "",
+          role,
           activo: true,
-        })
+        }
+        setUser(userObj)
+        // eslint-disable-next-line no-console
+        console.log("[AUTH] setUser (handleAuthResponse/JWT):", userObj)
       }
     },
     [scheduleRefresh]
   )
   // ---- Restaurar token desde cookie al iniciar ----
   useEffect(() => {
-    if (!backendToken) {
-      const cookieToken = getCookie("backendToken")
-      if (cookieToken) {
-        const payload = decodeJwtPayload(cookieToken)
-        if (payload?.exp && payload.exp * 1000 > Date.now()) {
-          setBackendToken(cookieToken)
-          setAuthToken(cookieToken)
-          scheduleRefresh(cookieToken)
-          // Opcional: cargar usuario desde el backend
-          getMe().then(me => {
-            setUser({
-              id: me.id,
-              email: me.email,
-              name: me.name,
-              role: me.role,
-              activo: me.activo,
-              clientesAsignados: me.clientesAsignados,
-              imagen: me.imagen,
-            })
-            setIsRestoring(false)
-          }).catch(() => {
-            // Fallback: leer datos del JWT
-            const payload = decodeJwtPayload(cookieToken) as Record<string, unknown> | null
-            setUser({
-              id: (payload?.sub as string) ?? "",
-              email: (payload?.email as string) ?? "",
-              name: (payload?.name as string) ?? "",
-              role: payload?.role === "supervisor" ? "supervisor" : "field",
-              activo: true,
-            })
-            setIsRestoring(false)
-          })
-        } else {
-          deleteCookie("backendToken")
-          setIsRestoring(false)
-        }
-      } else {
+    let cancelled = false
+
+    const restoreFromCookie = async () => {
+      // Si ya hay token en memoria, solo marcamos que terminó la restauración
+      if (backendToken) {
         setIsRestoring(false)
+        return
       }
-    } else {
-      setIsRestoring(false)
+
+      const cookieToken = getCookie("token")
+      if (!cookieToken) {
+        setIsRestoring(false)
+        return
+      }
+
+      const payload = decodeJwtPayload(cookieToken) as Record<string, unknown> | null
+      if (!(typeof payload?.exp === "number" && payload.exp * 1000 > Date.now())) {
+        deleteCookie("token")
+        deleteCookie("refresh_token")
+        setIsRestoring(false)
+        return
+      }
+
+      setBackendToken(cookieToken)
+      setAuthToken(cookieToken)
+      scheduleRefresh(cookieToken)
+
+      try {
+        const me = await getMe()
+        if (cancelled) return
+        const userObj: User = {
+          id: me.id,
+          email: me.email,
+          name: me.name,
+          role: normalizeRole(me.role),
+          activo: me.activo,
+          clientesAsignados: me.clientesAsignados,
+          imagen: me.imagen,
+        }
+        setUser(userObj)
+        // eslint-disable-next-line no-console
+        console.log("[AUTH] Sesión restaurada desde token (getMe):", userObj)
+      } catch {
+        if (cancelled) return
+        // Fallback: leer datos del JWT
+        const payloadJwt = decodeJwtPayload(cookieToken) as Record<string, unknown> | null
+        const role = normalizeRole(payloadJwt?.role ?? payloadJwt?.type)
+        const userObj: User = {
+          id: (payloadJwt?.id as string) ?? (payloadJwt?.sub as string) ?? "",
+          email: (payloadJwt?.user as string) ?? (payloadJwt?.email as string) ?? "",
+          name: (payloadJwt?.nombre as string) ?? (payloadJwt?.name as string) ?? "",
+          role,
+          activo: true,
+        }
+        // eslint-disable-next-line no-console
+        console.log("[AUTH] Sesión restaurada desde token (JWT):", userObj)
+        setUser(userObj)
+      } finally {
+        if (!cancelled) setIsRestoring(false)
+      }
+    }
+
+    restoreFromCookie()
+
+    return () => {
+      cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -247,28 +311,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const name = response.account?.name ?? email
 
         if (USE_MOCK) {
-          setUser({
+          const mockUser: User = {
             id: response.account?.localAccountId ?? "",
             email,
             name,
             role: "supervisor",
             activo: true,
-          })
+          }
+          setUser(mockUser)
+          // eslint-disable-next-line no-console
           console.log("✅ Inicio de sesión exitoso (mock) —", name, "(", email, ")")
         } else {
           // Enviar token al backend — el rol viene del endpoint /auth/me
-          loginWithEntra(entraToken).then(async (res) => {
-            if (cancelled) return
-            await handleAuthResponse(res)
-            console.log("✅ Inicio de sesión exitoso —", name, "(", email, ")")
-          }).catch((err) => {
-            console.error("❌ Error al autenticar con el backend:", err)
-          })
+          loginWithEntra(entraToken)
+            .then(async (res) => {
+              if (cancelled) return
+              await handleAuthResponse(res)
+              // eslint-disable-next-line no-console
+              console.log("✅ Inicio de sesión exitoso —", name, "(", email, ")")
+            })
+            .catch((err) => {
+              // eslint-disable-next-line no-console
+              console.error("❌ Error al autenticar con el backend:", err)
+            })
         }
       }
     })
 
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [msalEnabled, handleAuthResponse])
 
   // ---- Login local (credenciales) ----
@@ -350,7 +422,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setBackendToken(null)
     setRefreshToken(null)
     setAuthToken(null)
-    deleteCookie("backendToken")
+    // deleteCookie("backendToken") // Ya no se usa, migrado a 'token' y 'refresh_token'
   }, [])
 
   return (
@@ -358,12 +430,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         isLoading: isLoading || isRestoring,
+        isRestoring,
         login,
         loginWithEntraId,
         logout,
         backendToken,
         isMsalEnabled: msalEnabled,
-        isRestoring,
       }}
     >
       {children}

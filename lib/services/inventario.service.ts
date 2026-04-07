@@ -50,7 +50,7 @@ export interface InventarioPayload {
   cliente_id: number
   fecha: string
   items: Array<{
-    producto_id: string
+    producto_id: number
     cantidad: number
     lotes: Array<{
       lote: string
