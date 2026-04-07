@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react"
-import { getProductos } from "@/lib/services/productos.service"
-import type { Producto } from "@/lib/types"
+import { getProductos, createProducto, updateProducto } from "@/lib/services/productos.service"
+import { toast } from "sonner"
+import type { Producto } from "@/features/productos/types"
 
 const emptyForm = {
   nombre: "",
@@ -21,6 +22,7 @@ export function useProductoMaintenance() {
   const [productToDelete, setProductToDelete] = useState<Producto | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [formData, setFormData] = useState(emptyForm)
+  const [file, setFile] = useState<File | null>(null)
 
   useEffect(() => {
     getProductos().then(setProductos)
@@ -53,24 +55,36 @@ export function useProductoMaintenance() {
     setIsDialogOpen(true)
   }, [])
 
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     if (!formData.nombre || !formData.sku) return
 
-    if (editingProduct) {
-      setProductos((prev) =>
-        prev.map((p) =>
-          p.id === editingProduct.id ? { ...p, ...formData } : p
-        )
-      )
-    } else {
-      const newProduct: Producto = {
-        id: String(Date.now()),
-        ...formData,
+    // Construir FormData para multipart
+    const data = new FormData()
+    data.append("nombre", formData.nombre)
+    data.append("sku", formData.sku)
+    data.append("unidad", formData.unidad)
+    data.append("categoria_id", formData.categoria || "")
+    data.append("activo", formData.activo ? "true" : "false")
+    if (file) data.append("imagen", file)
+
+    try {
+      let producto
+      if (editingProduct) {
+        producto = await updateProducto(editingProduct.id, data, true)
+        setProductos((prev) => prev.map((p) => p.id === producto.id ? producto : p))
+        toast.success("Producto actualizado correctamente")
+      } else {
+        producto = await createProducto(data, true)
+        setProductos((prev) => [...prev, producto])
+        toast.success("Producto creado correctamente")
       }
-      setProductos((prev) => [...prev, newProduct])
+    } catch (e: any) {
+      toast.error("Error al guardar el producto" + (e?.message ? ": " + e.message : ""))
+      return
     }
     setIsDialogOpen(false)
-  }, [formData, editingProduct])
+    setFile(null)
+  }, [formData, editingProduct, file])
 
   const handleDeleteClick = useCallback((producto: Producto) => {
     setProductToDelete(producto)
@@ -88,6 +102,7 @@ export function useProductoMaintenance() {
   const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
+      setFile(file)
       const reader = new FileReader()
       reader.onloadend = () => {
         setFormData((prev) => ({ ...prev, imagen: reader.result as string }))

@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react"
 import { getUsuarios } from "@/lib/services/usuarios.service"
 import { getClientes } from "@/lib/services/clientes.service"
-import type { User, Cliente, UserRole } from "@/lib/types"
+import type { User, UserRole } from "@/features/usuarios/types"
+import type { Cliente } from "@/features/clientes/types"
 
 const emptyForm = {
   name: "",

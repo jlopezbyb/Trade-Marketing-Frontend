@@ -2,7 +2,9 @@ import { useState, useEffect } from "react"
 import { getInventarioActual } from "@/lib/services/inventario.service"
 import { getClientes } from "@/lib/services/clientes.service"
 import { getProductos } from "@/lib/services/productos.service"
-import type { InventarioItem, Cliente, Producto } from "@/lib/types"
+import type { InventarioItem } from "@/features/inventario/types"
+import type { Cliente } from "@/features/clientes/types"
+import type { Producto } from "@/features/productos/types"
 
 export function useInventarioActual() {
   const [search, setSearch] = useState("")

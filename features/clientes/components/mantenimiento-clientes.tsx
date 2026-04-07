@@ -3,15 +3,6 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,8 +13,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { ArrowLeft, Plus, Search, Edit2, Trash2, Upload, Building2, Phone, Mail, MapPin, User } from "lucide-react"
+import { ArrowLeft, Plus, Search, Building2 } from "lucide-react"
 import { useClienteMaintenance } from "../hooks/useClienteMaintenance"
+import { ClienteCard } from "./cliente-card"
+import { ClienteFormDialog } from "./cliente-form-dialog"
 
 interface MantenimientoClientesProps {
   onBack?: () => void
@@ -87,63 +80,12 @@ export function MantenimientoClientes({ onBack }: MantenimientoClientesProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredClientes.map((cliente) => (
-          <Card key={cliente.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-            <div className="aspect-video relative bg-muted">
-              {cliente.imagen ? (
-                <img
-                  src={cliente.imagen}
-                  alt={cliente.nombre}
-                  className="w-full h-full object-cover"
-                  crossOrigin="anonymous"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <Building2 className="h-16 w-16 text-muted-foreground/50" />
-                </div>
-              )}
-              <div className="absolute top-2 right-2 flex gap-1">
-                <Button
-                  size="icon"
-                  variant="secondary"
-                  className="h-8 w-8 bg-background/80 backdrop-blur-sm"
-                  onClick={() => handleOpenDialog(cliente)}
-                >
-                  <Edit2 className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="destructive"
-                  className="h-8 w-8"
-                  onClick={() => handleDeleteClick(cliente)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            <CardContent className="p-4 space-y-2">
-              <h3 className="font-semibold text-foreground truncate">{cliente.nombre}</h3>
-              <div className="space-y-1 text-sm text-muted-foreground">
-                <div className="flex items-start gap-2">
-                  <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
-                  <span className="line-clamp-2">{cliente.direccion}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 shrink-0" />
-                  <span className="truncate">{cliente.contacto}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 shrink-0" />
-                  <span>{cliente.telefono}</span>
-                </div>
-                {cliente.email && (
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 shrink-0" />
-                    <span className="truncate">{cliente.email}</span>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <ClienteCard
+            key={cliente.id}
+            cliente={cliente}
+            onEdit={handleOpenDialog}
+            onDelete={handleDeleteClick}
+          />
         ))}
       </div>
 
@@ -192,129 +134,19 @@ export function MantenimientoClientes({ onBack }: MantenimientoClientesProps) {
       )}
 
       {/* Create/Edit Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editingCliente ? "Editar Cliente" : "Nuevo Cliente"}
-            </DialogTitle>
-            <DialogDescription>
-              {editingCliente
-                ? "Modifica los datos del cliente"
-                : "Ingresa los datos del nuevo cliente"}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            {/* Image Upload */}
-            <div className="space-y-2">
-              <Label>Foto del Local</Label>
-              <div
-                className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary transition-colors"
-                onClick={() => fileInputRef.current?.click()}
-                onDrop={handleDrop}
-                onDragOver={(e) => e.preventDefault()}
-              >
-                {imagePreview ? (
-                  <div className="relative aspect-video">
-                    <img
-                      src={imagePreview}
-                      alt="Preview"
-                      className="w-full h-full object-cover rounded-md"
-                      crossOrigin="anonymous"
-                    />
-                  </div>
-                ) : (
-                  <div className="py-8">
-                    <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground">
-                      Clic o arrastra una imagen
-                    </p>
-                  </div>
-                )}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleImageUpload}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="nombre">Nombre del Negocio *</Label>
-              <Input
-                id="nombre"
-                value={formData.nombre}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, nombre: e.target.value }))
-                }
-                placeholder="Ej: Supermercado El Sol"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="direccion">Dirección *</Label>
-              <Input
-                id="direccion"
-                value={formData.direccion}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, direccion: e.target.value }))
-                }
-                placeholder="Ej: Av. Principal 123, Col. Centro"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="contacto">Persona de Contacto *</Label>
-              <Input
-                id="contacto"
-                value={formData.contacto}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, contacto: e.target.value }))
-                }
-                placeholder="Ej: Juan Pérez"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="telefono">Teléfono *</Label>
-                <Input
-                  id="telefono"
-                  value={formData.telefono}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, telefono: e.target.value }))
-                  }
-                  placeholder="555-123-4567"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, email: e.target.value }))
-                  }
-                  placeholder="correo@ejemplo.com"
-                />
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={handleCloseDialog}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSubmit}>
-              {editingCliente ? "Guardar Cambios" : "Crear Cliente"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ClienteFormDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        formData={formData}
+        setFormData={setFormData}
+        editingCliente={editingCliente}
+        imagePreview={imagePreview}
+        fileInputRef={fileInputRef}
+        onImageUpload={handleImageUpload}
+        onDrop={handleDrop}
+        onClose={handleCloseDialog}
+        onSubmit={handleSubmit}
+      />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

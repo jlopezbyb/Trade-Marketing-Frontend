@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { getInventarioEstancado } from "@/lib/services/reportes.service"
-import type { InventarioEstancado } from "@/lib/types"
+import type { InventarioEstancado } from "@/features/reportes/types"
 
 export function useReporteEstancado() {
   const [diasFilter, setDiasFilter] = useState("7")

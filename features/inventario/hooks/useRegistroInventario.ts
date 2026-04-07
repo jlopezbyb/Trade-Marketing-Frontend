@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { getProductos } from "@/lib/services/productos.service"
-import type { LoteInventario, Producto } from "@/lib/types"
+import type { LoteInventario } from "@/features/inventario/types"
+import type { Producto } from "@/features/productos/types"
 
 export interface ProductoConLotes {
   productoId: string

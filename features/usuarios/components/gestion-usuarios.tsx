@@ -2,26 +2,6 @@
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,9 +12,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Search, Plus, Edit2, Trash2, Users, Building2, UserCheck, UserX } from "lucide-react"
+import { Search, Plus } from "lucide-react"
 import { useUsuarioMaintenance } from "../hooks/useUsuarioMaintenance"
-import type { User } from "@/lib/types"
+import { UsuarioCard } from "./usuario-card"
+import { UsuarioFormDialog } from "./usuario-form-dialog"
+import { AsignarClientesDialog } from "./asignar-clientes-dialog"
 
 export function GestionUsuarios() {
   const {
@@ -65,77 +47,6 @@ export function GestionUsuarios() {
     toggleCliente,
     getClienteNombres,
   } = useUsuarioMaintenance()
-
-  const renderUserCard = (user: User) => (
-    <Card key={user.id} className={!user.activo ? "opacity-60" : ""}>
-      <CardContent className="p-4">
-        <div className="flex items-start gap-4">
-          <Avatar className="h-14 w-14">
-            <AvatarImage src={user.imagen} alt={user.name} />
-            <AvatarFallback className="bg-primary text-primary-foreground text-lg">
-              {user.name
-                .split(" ")
-                .map((n) => n[0])
-                .join("")
-                .toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-semibold truncate">{user.name}</h3>
-              <Badge variant={user.role === "supervisor" ? "default" : "secondary"}>
-                {user.role === "supervisor" ? "Supervisor" : "Campo"}
-              </Badge>
-              {!user.activo && <Badge variant="outline">Inactivo</Badge>}
-            </div>
-            <p className="text-sm text-muted-foreground truncate">{user.email}</p>
-            {user.role === "field" && user.clientesAsignados && user.clientesAsignados.length > 0 && (
-              <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
-                <Building2 className="h-3 w-3" />
-                <span className="truncate">
-                  {user.clientesAsignados.length} cliente(s) asignado(s)
-                </span>
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center gap-1">
-            {user.role === "field" && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleOpenAsignar(user)}
-                title="Asignar clientes"
-              >
-                <Users className="h-4 w-4" />
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleOpenDialog(user)}
-              title="Editar usuario"
-            >
-              <Edit2 className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleToggleActivo(user.id)}
-              title={user.activo ? "Desactivar" : "Activar"}
-            >
-              {user.activo ? (
-                <UserX className="h-4 w-4 text-destructive" />
-              ) : (
-                <UserCheck className="h-4 w-4 text-green-600" />
-              )}
-            </Button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  )
 
   return (
     <div className="space-y-6">
@@ -169,7 +80,15 @@ export function GestionUsuarios() {
         </h3>
         {usuariosActivos.length > 0 ? (
           <div className="grid gap-3">
-            {usuariosActivos.map(renderUserCard)}
+            {usuariosActivos.map((user) => (
+              <UsuarioCard
+                key={user.id}
+                user={user}
+                onEdit={handleOpenDialog}
+                onToggleActivo={handleToggleActivo}
+                onAsignarClientes={handleOpenAsignar}
+              />
+            ))}
           </div>
         ) : (
           <p className="text-muted-foreground text-center py-8">
@@ -185,137 +104,39 @@ export function GestionUsuarios() {
             Usuarios Inactivos ({usuariosInactivos.length})
           </h3>
           <div className="grid gap-3">
-            {usuariosInactivos.map(renderUserCard)}
+            {usuariosInactivos.map((user) => (
+              <UsuarioCard
+                key={user.id}
+                user={user}
+                onEdit={handleOpenDialog}
+                onToggleActivo={handleToggleActivo}
+                onAsignarClientes={handleOpenAsignar}
+              />
+            ))}
           </div>
         </div>
       )}
 
       {/* Create/Edit Dialog */}
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingUser ? "Editar Usuario" : "Nuevo Usuario"}
-            </DialogTitle>
-            <DialogDescription>
-              {editingUser
-                ? "Modifica los datos del usuario"
-                : "Completa los datos para crear un nuevo usuario"}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div>
-              <Label>Nombre completo</Label>
-              <Input
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Ej: María García"
-              />
-            </div>
-
-            <div>
-              <Label>Email</Label>
-              <Input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="usuario@byb.com"
-              />
-            </div>
-
-            <div>
-              <Label>Rol</Label>
-              <Select
-                value={formData.role}
-                onValueChange={(value: UserRole) =>
-                  setFormData({ ...formData, role: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="field">Usuario de Campo</SelectItem>
-                  <SelectItem value="supervisor">Supervisor</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label>URL de imagen (opcional)</Label>
-              <Input
-                value={formData.imagen}
-                onChange={(e) => setFormData({ ...formData, imagen: e.target.value })}
-                placeholder="https://..."
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDialog(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSave} disabled={!formData.name || !formData.email}>
-              {editingUser ? "Guardar Cambios" : "Crear Usuario"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <UsuarioFormDialog
+        open={showDialog}
+        onOpenChange={setShowDialog}
+        formData={formData}
+        setFormData={setFormData}
+        editingUser={editingUser}
+        onSave={handleSave}
+      />
 
       {/* Assign Clients Dialog */}
-      <Dialog open={showAsignarDialog} onOpenChange={setShowAsignarDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Asignar Clientes</DialogTitle>
-            <DialogDescription>
-              Selecciona los clientes para {userToAsignar?.name}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-3 max-h-[400px] overflow-y-auto">
-            {allClientes
-              .filter((c) => c.activo)
-              .map((cliente) => (
-                <Card
-                  key={cliente.id}
-                  className={`cursor-pointer transition-colors ${
-                    clientesSeleccionados.includes(cliente.id)
-                      ? "border-primary bg-primary/5"
-                      : ""
-                  }`}
-                  onClick={() => toggleCliente(cliente.id)}
-                >
-                  <CardContent className="p-3 flex items-center gap-3">
-                    <Checkbox
-                      checked={clientesSeleccionados.includes(cliente.id)}
-                      onCheckedChange={() => toggleCliente(cliente.id)}
-                    />
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={cliente.imagen} alt={cliente.nombre} />
-                      <AvatarFallback>{cliente.nombre[0]}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{cliente.nombre}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {cliente.direccion}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAsignarDialog(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSaveAsignacion}>
-              Guardar ({clientesSeleccionados.length} seleccionados)
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AsignarClientesDialog
+        open={showAsignarDialog}
+        onOpenChange={setShowAsignarDialog}
+        user={userToAsignar}
+        clientes={allClientes}
+        clientesSeleccionados={clientesSeleccionados}
+        onToggleCliente={toggleCliente}
+        onSave={handleSaveAsignacion}
+      />
 
       {/* Delete Confirmation */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

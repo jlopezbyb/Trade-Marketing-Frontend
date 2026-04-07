@@ -28,6 +28,24 @@ import {
 } from "./api-client"
 
 // ---------------------------------------------------------------------------
+// Cookie helpers
+// ---------------------------------------------------------------------------
+function setCookie(name: string, value: string, expires?: Date) {
+  let cookie = `${name}=${encodeURIComponent(value)}; path=/; SameSite=Strict`;
+  if (expires) cookie += `; expires=${expires.toUTCString()}`;
+  document.cookie = cookie;
+}
+
+function getCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
+function deleteCookie(name: string) {
+  document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict`;
+}
+
+// ---------------------------------------------------------------------------
 // Tipos
 // ---------------------------------------------------------------------------
 
@@ -83,6 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [backendToken, setBackendToken] = useState<string | null>(null)
   const [refreshToken, setRefreshToken] = useState<string | null>(null)
   const [msalReady, setMsalReady] = useState(false)
+  const [isRestoring, setIsRestoring] = useState(true)
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const msalEnabled = isMsalConfigured()
@@ -128,6 +147,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setBackendToken(res.token)
       setRefreshToken(res.refreshToken)
       setAuthToken(res.token)
+      // Guardar token en cookie (expiración igual a la del JWT)
+      const payload = decodeJwtPayload(res.token)
+      if (payload?.exp) {
+        setCookie("backendToken", res.token, new Date(payload.exp * 1000))
+      } else {
+        setCookie("backendToken", res.token)
+      }
       scheduleRefresh(res.token)
 
       try {
@@ -155,6 +181,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     [scheduleRefresh]
   )
+  // ---- Restaurar token desde cookie al iniciar ----
+  useEffect(() => {
+    if (!backendToken) {
+      const cookieToken = getCookie("backendToken")
+      if (cookieToken) {
+        const payload = decodeJwtPayload(cookieToken)
+        if (payload?.exp && payload.exp * 1000 > Date.now()) {
+          setBackendToken(cookieToken)
+          setAuthToken(cookieToken)
+          scheduleRefresh(cookieToken)
+          // Opcional: cargar usuario desde el backend
+          getMe().then(me => {
+            setUser({
+              id: me.id,
+              email: me.email,
+              name: me.name,
+              role: me.role,
+              activo: me.activo,
+              clientesAsignados: me.clientesAsignados,
+              imagen: me.imagen,
+            })
+            setIsRestoring(false)
+          }).catch(() => {
+            // Fallback: leer datos del JWT
+            const payload = decodeJwtPayload(cookieToken) as Record<string, unknown> | null
+            setUser({
+              id: (payload?.sub as string) ?? "",
+              email: (payload?.email as string) ?? "",
+              name: (payload?.name as string) ?? "",
+              role: payload?.role === "supervisor" ? "supervisor" : "field",
+              activo: true,
+            })
+            setIsRestoring(false)
+          })
+        } else {
+          deleteCookie("backendToken")
+          setIsRestoring(false)
+        }
+      } else {
+        setIsRestoring(false)
+      }
+    } else {
+      setIsRestoring(false)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // ---- Inicializar MSAL y procesar redirect ----
   useEffect(() => {
@@ -272,44 +344,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   // ---- Logout ----
-  const logout = useCallback(async () => {
+  const logout = useCallback(() => {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
-
-    // Logout en el backend
-    if (!USE_MOCK && backendToken) {
-      try {
-        await logoutBackend()
-      } catch {
-        // Continuar con el logout local aunque el backend falle
-      }
-    }
-
     setUser(null)
     setBackendToken(null)
     setRefreshToken(null)
     setAuthToken(null)
-
-    // Logout de MSAL (redirect — limpia sesión en Microsoft)
-    const instance = getMsalInstance()
-    if (instance && instance.getActiveAccount()) {
-      try {
-        await instance.logoutRedirect()
-      } catch {
-        // Continuar
-      }
-    }
-  }, [backendToken])
+    deleteCookie("backendToken")
+  }, [])
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        isLoading,
+        isLoading: isLoading || isRestoring,
         login,
         loginWithEntraId,
         logout,
         backendToken,
         isMsalEnabled: msalEnabled,
+        isRestoring,
       }}
     >
       {children}

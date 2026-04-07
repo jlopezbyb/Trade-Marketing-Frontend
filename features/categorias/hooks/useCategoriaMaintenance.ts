@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { getCategorias } from "@/lib/services/categorias.service"
-import type { Categoria } from "@/lib/types"
+import type { Categoria } from "@/features/categorias/types"
 
 const emptyForm = {
   nombre: "",

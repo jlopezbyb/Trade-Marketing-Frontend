@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react"
 import { getProductosPorVencer } from "@/lib/services/reportes.service"
 import { getClientes } from "@/lib/services/clientes.service"
-import type { ProductoPorVencer, Cliente } from "@/lib/types"
+import type { ProductoPorVencer } from "@/features/reportes/types"
+import type { Cliente } from "@/features/clientes/types"
 import { AlertTriangle, AlertCircle, Clock } from "lucide-react"
 
 export function useReporteVencimientos() {

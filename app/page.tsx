@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
 import { AuthProvider, useAuth } from "@/lib/auth-context"
+import { useAppRouter } from "@/hooks/useAppRouter"
 import { LoginForm } from "@/features/auth"
 import { AppHeader } from "@/shared/layout/app-header"
 import { SupervisorSidebar } from "@/shared/layout/supervisor-sidebar"
@@ -14,50 +14,28 @@ import { MantenimientoProductos } from "@/features/productos"
 import { MantenimientoClientes } from "@/features/clientes"
 import { MantenimientoCategorias } from "@/features/categorias"
 import { GestionUsuarios } from "@/features/usuarios"
-import type { Cliente } from "@/lib/types"
-
-type Page =
-  | "dashboard"
-  | "clientes"
-  | "nueva-visita"
-  | "registrar-inventario"
-  | "historial"
-  | "inventario-actual"
-  | "reporte-estancado"
-  | "reporte-vencimientos"
-  | "mantenimiento-productos"
-  | "mantenimiento-clientes"
-  | "mantenimiento-categorias"
-  | "gestion-usuarios"
 
 function AppContent() {
-  const { user } = useAuth()
-  const [currentPage, setCurrentPage] = useState<Page>("dashboard")
-  const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null)
-  const [currentVisitaId, setCurrentVisitaId] = useState<string | null>(null)
+  const { user, isRestoring } = useAuth()
+  const {
+    currentPage,
+    selectedCliente,
+    currentVisitaId,
+    navigate,
+    selectCliente,
+    onVisitaCreated,
+    backToDashboard,
+  } = useAppRouter()
 
+  if (isRestoring) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <span className="text-lg text-muted-foreground">Cargando sesión...</span>
+      </div>
+    )
+  }
   if (!user) {
     return <LoginForm onSuccess={() => {}} />
-  }
-
-  const handleNavigate = (page: string) => {
-    setCurrentPage(page as Page)
-  }
-
-  const handleSelectCliente = (cliente: Cliente) => {
-    setSelectedCliente(cliente)
-    setCurrentPage("nueva-visita")
-  }
-
-  const handleVisitaCreated = (visitaId: string) => {
-    setCurrentVisitaId(visitaId)
-    setCurrentPage("registrar-inventario")
-  }
-
-  const handleBackToDashboard = () => {
-    setCurrentPage("dashboard")
-    setSelectedCliente(null)
-    setCurrentVisitaId(null)
   }
 
   const renderPage = () => {
@@ -65,32 +43,32 @@ function AppContent() {
       case "clientes":
         return (
           <ClientesList
-            onBack={user.role === "field" ? handleBackToDashboard : undefined}
-            onSelectCliente={handleSelectCliente}
+            onBack={user.role === "field" ? backToDashboard : undefined}
+            onSelectCliente={selectCliente}
           />
         )
       case "nueva-visita":
         if (!selectedCliente) {
           return (
             <ClientesList
-              onBack={user.role === "field" ? handleBackToDashboard : undefined}
-              onSelectCliente={handleSelectCliente}
+              onBack={user.role === "field" ? backToDashboard : undefined}
+              onSelectCliente={selectCliente}
             />
           )
         }
         return (
           <RegistrarVisita
             cliente={selectedCliente}
-            onBack={handleBackToDashboard}
-            onContinue={handleVisitaCreated}
+            onBack={backToDashboard}
+            onContinue={onVisitaCreated}
           />
         )
       case "registrar-inventario":
         if (!selectedCliente || !currentVisitaId) {
           return (
             <ClientesList
-              onBack={user.role === "field" ? handleBackToDashboard : undefined}
-              onSelectCliente={handleSelectCliente}
+              onBack={user.role === "field" ? backToDashboard : undefined}
+              onSelectCliente={selectCliente}
             />
           )
         }
@@ -98,31 +76,31 @@ function AppContent() {
           <RegistroInventario
             cliente={selectedCliente}
             visitaId={currentVisitaId}
-            onBack={handleBackToDashboard}
-            onComplete={handleBackToDashboard}
+            onBack={backToDashboard}
+            onComplete={backToDashboard}
           />
         )
       case "historial":
-        return <HistorialVisitas onBack={user.role === "field" ? handleBackToDashboard : undefined} />
+        return <HistorialVisitas onBack={user.role === "field" ? backToDashboard : undefined} />
       case "inventario-actual":
-        return <InventarioActual onBack={user.role === "field" ? handleBackToDashboard : undefined} />
+        return <InventarioActual onBack={user.role === "field" ? backToDashboard : undefined} />
       case "reporte-estancado":
-        return <ReporteEstancado onBack={user.role === "field" ? handleBackToDashboard : undefined} />
+        return <ReporteEstancado onBack={user.role === "field" ? backToDashboard : undefined} />
       case "reporte-vencimientos":
         return <ReporteVencimientos />
       case "mantenimiento-productos":
-        return <MantenimientoProductos onBack={user.role === "field" ? handleBackToDashboard : undefined} />
+        return <MantenimientoProductos onBack={user.role === "field" ? backToDashboard : undefined} />
       case "mantenimiento-clientes":
-        return <MantenimientoClientes onBack={user.role === "field" ? handleBackToDashboard : undefined} />
+        return <MantenimientoClientes onBack={user.role === "field" ? backToDashboard : undefined} />
       case "mantenimiento-categorias":
-        return <MantenimientoCategorias onBack={user.role === "field" ? handleBackToDashboard : undefined} />
+        return <MantenimientoCategorias onBack={user.role === "field" ? backToDashboard : undefined} />
       case "gestion-usuarios":
         return <GestionUsuarios />
       default:
         return user.role === "field" ? (
-          <DashboardField onNavigate={handleNavigate} />
+          <DashboardField onNavigate={navigate} />
         ) : (
-          <DashboardSupervisor onNavigate={handleNavigate} />
+          <DashboardSupervisor onNavigate={navigate} />
         )
     }
   }
@@ -131,7 +109,7 @@ function AppContent() {
   if (user.role === "supervisor") {
     return (
       <div className="h-screen flex overflow-hidden bg-background">
-        <SupervisorSidebar currentPage={currentPage} onNavigate={handleNavigate} />
+        <SupervisorSidebar currentPage={currentPage} onNavigate={navigate} />
         <div className="flex-1 flex flex-col min-w-0">
           <AppHeader />
           <main className="flex-1 overflow-auto">{renderPage()}</main>

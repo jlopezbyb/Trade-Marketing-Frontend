@@ -1,7 +1,8 @@
 import { useRef, useCallback, useState, useEffect } from "react"
 import { getProductosPorVencer } from "@/lib/services/reportes.service"
 import { getClientes } from "@/lib/services/clientes.service"
-import type { ProductoPorVencer, Cliente } from "@/lib/types"
+import type { ProductoPorVencer } from "@/features/reportes/types"
+import type { Cliente } from "@/features/clientes/types"
 
 export function useDashboardSupervisor() {
   const chartRef1 = useRef<HTMLDivElement>(null)

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { getClientes } from "@/lib/services/clientes.service"
-import type { Cliente } from "@/lib/types"
+import type { Cliente } from "@/features/clientes/types"
 
 const emptyForm = {
   nombre: "",

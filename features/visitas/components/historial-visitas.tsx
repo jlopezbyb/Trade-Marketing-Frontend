@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowLeft, Calendar, MessageSquare } from "lucide-react"
 import { getVisitas } from "@/lib/services/visitas.service"
-import type { Visita } from "@/lib/types"
+import type { Visita } from "@/features/visitas/types"
 
 interface HistorialVisitasProps {
   onBack?: () => void

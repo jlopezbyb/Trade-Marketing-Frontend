@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Search, MapPin, Phone, User } from "lucide-react"
 import { getClientes } from "@/lib/services/clientes.service"
-import type { Cliente } from "@/lib/types"
+import type { Cliente } from "@/features/clientes/types"
 
 interface ClientesListProps {
   onBack?: () => void

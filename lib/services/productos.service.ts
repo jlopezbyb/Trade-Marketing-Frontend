@@ -45,30 +45,39 @@ export async function getProductoById(id: string): Promise<Producto | undefined>
   return mapProducto(raw)
 }
 
-export async function createProducto(data: Omit<Producto, "id">): Promise<Producto> {
+// Si isFormData es true, data debe ser FormData y se envía como multipart
+export async function createProducto(data: any, isFormData = false): Promise<Producto> {
   if (USE_MOCK) {
     const nuevo: Producto = { ...data, id: String(Date.now()) }
     mockProductos.push(nuevo)
     return nuevo
   }
-  const raw = await apiFetch<ProductoAPI>("/productos", {
+  const options: RequestInit = {
     method: "POST",
-    body: JSON.stringify(data),
-  })
+    body: isFormData ? data : JSON.stringify(data),
+  }
+  if (!isFormData) {
+    (options.headers ||= {})["Content-Type"] = "application/json"
+  }
+  const raw = await apiFetch<ProductoAPI>("/productos", options)
   return mapProducto(raw)
 }
 
-export async function updateProducto(id: string, data: Partial<Producto>): Promise<Producto> {
+export async function updateProducto(id: string, data: any, isFormData = false): Promise<Producto> {
   if (USE_MOCK) {
     const idx = mockProductos.findIndex((p) => p.id === id)
     if (idx === -1) throw new Error("Producto no encontrado")
     mockProductos[idx] = { ...mockProductos[idx], ...data }
     return mockProductos[idx]
   }
-  const raw = await apiFetch<ProductoAPI>(`/productos/${encodeURIComponent(id)}`, {
+  const options: RequestInit = {
     method: "PUT",
-    body: JSON.stringify(data),
-  })
+    body: isFormData ? data : JSON.stringify(data),
+  }
+  if (!isFormData) {
+    (options.headers ||= {})["Content-Type"] = "application/json"
+  }
+  const raw = await apiFetch<ProductoAPI>(`/productos/${encodeURIComponent(id)}`, options)
   return mapProducto(raw)
 }
 

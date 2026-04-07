@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ArrowLeft, Calendar, MapPin, CheckCircle } from "lucide-react"
-import type { Cliente } from "@/lib/types"
+import type { Cliente } from "@/features/clientes/types"
 
 interface RegistrarVisitaProps {
   cliente: Cliente
