@@ -6,6 +6,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ArrowLeft, Calendar, MessageSquare } from "lucide-react"
 import { getVisitas } from "@/lib/services/visitas.service"
 import type { Visita } from "@/features/visitas/types"
+import { usePagination } from "@/hooks/usePagination"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 
 interface HistorialVisitasProps {
   onBack?: () => void
@@ -17,6 +26,11 @@ export function HistorialVisitas({ onBack }: HistorialVisitasProps) {
   useEffect(() => {
     getVisitas().then(setVisitas)
   }, [])
+
+  const { page, pageCount, items: visitasPaginadas, nextPage, prevPage, goToPage } = usePagination(
+    visitas,
+    10
+  )
 
   return (
     <div className="flex flex-col min-h-full">
@@ -42,7 +56,7 @@ export function HistorialVisitas({ onBack }: HistorialVisitasProps) {
             No hay visitas registradas
           </div>
         ) : (
-          visitas.map((visita) => (
+          visitasPaginadas.map((visita) => (
             <Card key={visita.id}>
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
@@ -63,6 +77,50 @@ export function HistorialVisitas({ onBack }: HistorialVisitasProps) {
               )}
             </Card>
           ))
+        )}
+
+        {visitas.length > 0 && pageCount > 1 && (
+          <div className="pt-4">
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      prevPage()
+                    }}
+                  />
+                </PaginationItem>
+                {Array.from({ length: pageCount }).map((_, index) => {
+                  const pageNumber = index + 1
+                  return (
+                    <PaginationItem key={pageNumber}>
+                      <PaginationLink
+                        href="#"
+                        isActive={pageNumber === page}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          goToPage(pageNumber)
+                        }}
+                      >
+                        {pageNumber}
+                      </PaginationLink>
+                    </PaginationItem>
+                  )
+                })}
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      nextPage()
+                    }}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
         )}
       </div>
     </div>

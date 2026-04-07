@@ -1,12 +1,21 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Search, MapPin, Phone, User } from "lucide-react"
 import { getClientes } from "@/lib/services/clientes.service"
 import type { Cliente } from "@/features/clientes/types"
+import { usePagination } from "@/hooks/usePagination"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 
 interface ClientesListProps {
   onBack?: () => void
@@ -21,9 +30,23 @@ export function ClientesList({ onBack, onSelectCliente }: ClientesListProps) {
     getClientes().then(setClientes)
   }, [])
 
-  const filteredClientes = clientes.filter((cliente) =>
-    cliente.activo && cliente.nombre.toLowerCase().includes(search.toLowerCase())
+  const filteredClientes = useMemo(
+    () =>
+      clientes.filter(
+        (cliente) =>
+          cliente.activo && cliente.nombre.toLowerCase().includes(search.toLowerCase())
+      ),
+    [clientes, search]
   )
+
+  const {
+    page,
+    pageCount,
+    items: pagedClientes,
+    nextPage,
+    prevPage,
+    goToPage,
+  } = usePagination(filteredClientes, 10)
 
   return (
     <div className="flex flex-col min-h-full">
@@ -59,7 +82,7 @@ export function ClientesList({ onBack, onSelectCliente }: ClientesListProps) {
             No se encontraron clientes
           </div>
         ) : (
-          filteredClientes.map((cliente) => (
+          pagedClientes.map((cliente) => (
             <Card 
               key={cliente.id}
               className="cursor-pointer hover:shadow-md transition-shadow border-2 hover:border-primary"
@@ -84,6 +107,50 @@ export function ClientesList({ onBack, onSelectCliente }: ClientesListProps) {
               </CardContent>
             </Card>
           ))
+        )}
+
+        {filteredClientes.length > 0 && pageCount > 1 && (
+          <div className="pt-4">
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      prevPage()
+                    }}
+                  />
+                </PaginationItem>
+                {Array.from({ length: pageCount }).map((_, index) => {
+                  const pageNumber = index + 1
+                  return (
+                    <PaginationItem key={pageNumber}>
+                      <PaginationLink
+                        href="#"
+                        isActive={pageNumber === page}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          goToPage(pageNumber)
+                        }}
+                      >
+                        {pageNumber}
+                      </PaginationLink>
+                    </PaginationItem>
+                  )
+                })}
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      nextPage()
+                    }}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
         )}
       </div>
     </div>

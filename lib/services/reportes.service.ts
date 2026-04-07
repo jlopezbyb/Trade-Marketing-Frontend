@@ -58,6 +58,34 @@ function mapPorVencer(raw: PorVencerAPI): ProductoPorVencer {
   }
 }
 
+interface DashboardSummaryRaw {
+  totalClientes?: number
+  total_clientes?: number
+  totalProductos?: number
+  total_productos?: number
+  totalVisitas?: number
+  total_visitas?: number
+  totalInventario?: number
+  total_inventario?: number
+  inventarioEstancado?: number
+  inventario_estancado?: number
+  productosPorVencer?: number
+  productos_por_vencer?: number
+}
+
+function mapDashboardSummary(raw: DashboardSummaryRaw): DashboardSummary {
+  return {
+    totalClientes: raw.totalClientes ?? raw.total_clientes ?? 0,
+    totalProductos: raw.totalProductos ?? raw.total_productos ?? 0,
+    totalVisitas: raw.totalVisitas ?? raw.total_visitas ?? 0,
+    totalInventario: raw.totalInventario ?? raw.total_inventario ?? 0,
+    inventarioEstancado:
+      raw.inventarioEstancado ?? raw.inventario_estancado ?? 0,
+    productosPorVencer:
+      raw.productosPorVencer ?? raw.productos_por_vencer ?? 0,
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Service
 // ---------------------------------------------------------------------------
@@ -75,5 +103,7 @@ export async function getProductosPorVencer(): Promise<ProductoPorVencer[]> {
 }
 
 export async function getDashboardSummary(): Promise<DashboardSummary> {
-  return apiFetch<DashboardSummary>("/reportes/summary")
+  const res = await apiFetch<DashboardSummaryRaw | { data: DashboardSummaryRaw }>("/reportes/summary")
+  const raw = (res as { data?: DashboardSummaryRaw }).data ?? (res as DashboardSummaryRaw)
+  return mapDashboardSummary(raw)
 }

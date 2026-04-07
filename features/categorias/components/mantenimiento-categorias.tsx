@@ -17,6 +17,15 @@ import { ArrowLeft, Plus, Search, Tag } from "lucide-react"
 import { useCategoriaMaintenance } from "../hooks/useCategoriaMaintenance"
 import { CategoriaCard, CategoriaInactiveCard } from "./categoria-card"
 import { CategoriaFormDialog } from "./categoria-form-dialog"
+import { usePagination } from "@/hooks/usePagination"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 
 interface MantenimientoCategoriasProps {
   onBack?: () => void
@@ -44,6 +53,24 @@ export function MantenimientoCategorias({ onBack }: MantenimientoCategoriasProps
     handleDeleteClick,
     handleConfirmDelete,
   } = useCategoriaMaintenance()
+
+  const {
+    page: pageActivas,
+    pageCount: pageCountActivas,
+    items: categoriasActivasPaginadas,
+    nextPage: nextActivas,
+    prevPage: prevActivas,
+    goToPage: goToPageActivas,
+  } = usePagination(filteredActivas, 10)
+
+  const {
+    page: pageInactivas,
+    pageCount: pageCountInactivas,
+    items: categoriasInactivasPaginadas,
+    nextPage: nextInactivas,
+    prevPage: prevInactivas,
+    goToPage: goToPageInactivas,
+  } = usePagination(categoriasInactivas, 10)
 
   return (
     <div className="p-4 space-y-4">
@@ -87,7 +114,7 @@ export function MantenimientoCategorias({ onBack }: MantenimientoCategoriasProps
             </CardContent>
           </Card>
         ) : (
-          filteredActivas.map((categoria) => (
+          categoriasActivasPaginadas.map((categoria) => (
             <CategoriaCard
               key={categoria.id}
               categoria={categoria}
@@ -98,11 +125,55 @@ export function MantenimientoCategorias({ onBack }: MantenimientoCategoriasProps
         )}
       </div>
 
+      {filteredActivas.length > 0 && pageCountActivas > 1 && (
+        <div className="pt-4">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    prevActivas()
+                  }}
+                />
+              </PaginationItem>
+              {Array.from({ length: pageCountActivas }).map((_, index) => {
+                const pageNumber = index + 1
+                return (
+                  <PaginationItem key={pageNumber}>
+                    <PaginationLink
+                      href="#"
+                      isActive={pageNumber === pageActivas}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        goToPageActivas(pageNumber)
+                      }}
+                    >
+                      {pageNumber}
+                    </PaginationLink>
+                  </PaginationItem>
+                )
+              })}
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    nextActivas()
+                  }}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
+
       {/* Categorías inactivas */}
       {categoriasInactivas.length > 0 && (
         <div className="space-y-3">
           <h3 className="text-sm font-medium text-muted-foreground">Categorías Inactivas</h3>
-          {categoriasInactivas.map((categoria) => (
+          {categoriasInactivasPaginadas.map((categoria) => (
             <CategoriaInactiveCard
               key={categoria.id}
               categoria={categoria}
@@ -110,6 +181,50 @@ export function MantenimientoCategorias({ onBack }: MantenimientoCategoriasProps
               onDelete={handleDeleteClick}
             />
           ))}
+
+          {categoriasInactivas.length > 0 && pageCountInactivas > 1 && (
+            <div className="pt-4">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        prevInactivas()
+                      }}
+                    />
+                  </PaginationItem>
+                  {Array.from({ length: pageCountInactivas }).map((_, index) => {
+                    const pageNumber = index + 1
+                    return (
+                      <PaginationItem key={pageNumber}>
+                        <PaginationLink
+                          href="#"
+                          isActive={pageNumber === pageInactivas}
+                          onClick={(e) => {
+                            e.preventDefault()
+                            goToPageInactivas(pageNumber)
+                          }}
+                        >
+                          {pageNumber}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )
+                  })}
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        nextInactivas()
+                      }}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </div>
       )}
 

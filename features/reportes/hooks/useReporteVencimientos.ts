@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import * as XLSX from "xlsx"
 import { getProductosPorVencer } from "@/lib/services/reportes.service"
 import { getClientes } from "@/lib/services/clientes.service"
@@ -17,11 +17,15 @@ export function useReporteVencimientos() {
     getClientes().then(setClientes)
   }, [])
 
-  const productosFiltrados = porVencer.filter((p) => {
-    const matchCliente = filtroCliente === "todos" || p.clienteId === filtroCliente
-    const matchEstado = filtroEstado === "todos" || p.estado === filtroEstado
-    return matchCliente && matchEstado
-  })
+  const productosFiltrados = useMemo(
+    () =>
+      porVencer.filter((p) => {
+        const matchCliente = filtroCliente === "todos" || p.clienteId === filtroCliente
+        const matchEstado = filtroEstado === "todos" || p.estado === filtroEstado
+        return matchCliente && matchEstado
+      }),
+    [porVencer, filtroCliente, filtroEstado]
+  )
 
   const countByEstado = {
     critico: porVencer.filter((p) => p.estado === "critico").length,

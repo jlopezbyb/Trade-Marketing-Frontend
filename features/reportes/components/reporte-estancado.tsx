@@ -5,6 +5,15 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Download, AlertTriangle, Package, Calendar, Clock } from "lucide-react"
 import { useReporteEstancado } from "../hooks/useReporteEstancado"
+import { usePagination } from "@/hooks/usePagination"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 
 interface ReporteEstancadoProps {
   onBack?: () => void
@@ -17,6 +26,11 @@ export function ReporteEstancado({ onBack }: ReporteEstancadoProps) {
     filteredInventario,
     handleExportXLSX,
   } = useReporteEstancado()
+
+  const { page, pageCount, items: itemsPaginados, nextPage, prevPage, goToPage } = usePagination(
+    filteredInventario,
+    10
+  )
 
   return (
     <div className="flex flex-col min-h-full">
@@ -69,7 +83,7 @@ export function ReporteEstancado({ onBack }: ReporteEstancadoProps) {
             </p>
           </div>
         ) : (
-          filteredInventario.map((item) => (
+          itemsPaginados.map((item) => (
             <Card key={item.id} className="border-destructive/30 bg-destructive/5">
               <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-4">
@@ -96,6 +110,50 @@ export function ReporteEstancado({ onBack }: ReporteEstancadoProps) {
             </Card>
           ))
         )}
+
+          {filteredInventario.length > 0 && pageCount > 1 && (
+            <div className="pt-4">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        prevPage()
+                      }}
+                    />
+                  </PaginationItem>
+                  {Array.from({ length: pageCount }).map((_, index) => {
+                    const pageNumber = index + 1
+                    return (
+                      <PaginationItem key={pageNumber}>
+                        <PaginationLink
+                          href="#"
+                          isActive={pageNumber === page}
+                          onClick={(e) => {
+                            e.preventDefault()
+                            goToPage(pageNumber)
+                          }}
+                        >
+                          {pageNumber}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )
+                  })}
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        nextPage()
+                      }}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
       </div>
     </div>
   )

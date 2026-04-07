@@ -25,6 +25,15 @@ import { getCategorias } from "@/lib/services/categorias.service"
 import type { Categoria } from "@/lib/types"
 import { ProductoCard } from "./producto-card"
 import { ProductoFormDialog } from "./producto-form-dialog"
+import { usePagination } from "@/hooks/usePagination"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 
 
 interface MantenimientoProductosProps {
@@ -61,6 +70,15 @@ export function MantenimientoProductos({ onBack }: MantenimientoProductosProps) 
   useEffect(() => {
     getCategorias().then(setCategorias)
   }, [])
+
+  const {
+    page,
+    pageCount,
+    items: productosPaginados,
+    nextPage,
+    prevPage,
+    goToPage,
+  } = usePagination(filteredProducts, 9)
 
   return (
     <div className="p-4 space-y-4">
@@ -110,7 +128,7 @@ export function MantenimientoProductos({ onBack }: MantenimientoProductosProps) 
 
       {/* Lista de Productos */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredProducts.map((producto) => (
+        {productosPaginados.map((producto) => (
           <ProductoCard
             key={producto.id}
             producto={producto}
@@ -128,6 +146,50 @@ export function MantenimientoProductos({ onBack }: MantenimientoProductosProps) 
             <p>No se encontraron productos</p>
           </div>
         </Card>
+      )}
+
+      {filteredProducts.length > 0 && pageCount > 1 && (
+        <div className="pt-4">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    prevPage()
+                  }}
+                />
+              </PaginationItem>
+              {Array.from({ length: pageCount }).map((_, index) => {
+                const pageNumber = index + 1
+                return (
+                  <PaginationItem key={pageNumber}>
+                    <PaginationLink
+                      href="#"
+                      isActive={pageNumber === page}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        goToPage(pageNumber)
+                      }}
+                    >
+                      {pageNumber}
+                    </PaginationLink>
+                  </PaginationItem>
+                )
+              })}
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    nextPage()
+                  }}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
       )}
 
       {/* Dialog Crear/Editar */}

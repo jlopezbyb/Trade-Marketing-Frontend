@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { getCategorias, createCategoria, updateCategoria, deleteCategoria } from "@/lib/services/categorias.service"
 import { toast } from "sonner"
 import type { Categoria } from "@/features/categorias/types"
@@ -22,13 +22,23 @@ export function useCategoriaMaintenance() {
     getCategorias().then(setCategorias)
   }, [])
 
-  const categoriasActivas = categorias.filter((c) => c.activo)
-  const categoriasInactivas = categorias.filter((c) => !c.activo)
+  const categoriasActivas = useMemo(
+    () => categorias.filter((c) => c.activo),
+    [categorias]
+  )
+  const categoriasInactivas = useMemo(
+    () => categorias.filter((c) => !c.activo),
+    [categorias]
+  )
 
-  const filteredActivas = categoriasActivas.filter(
-    (c) =>
-      c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (c.descripcion && c.descripcion.toLowerCase().includes(searchTerm.toLowerCase()))
+  const filteredActivas = useMemo(
+    () =>
+      categoriasActivas.filter(
+        (c) =>
+          c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (c.descripcion && c.descripcion.toLowerCase().includes(searchTerm.toLowerCase()))
+      ),
+    [categoriasActivas, searchTerm]
   )
 
   const handleOpenCreate = useCallback(() => {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { getUsuarios } from "@/lib/services/usuarios.service"
 import { getClientes } from "@/lib/services/clientes.service"
 import type { User, UserRole } from "@/features/usuarios/types"
@@ -29,14 +29,24 @@ export function useUsuarioMaintenance() {
     getClientes().then(setAllClientes)
   }, [])
 
-  const filteredUsuarios = usuarios.filter(
-    (u) =>
-      u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredUsuarios = useMemo(
+    () =>
+      usuarios.filter(
+        (u) =>
+          u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          u.email.toLowerCase().includes(searchTerm.toLowerCase())
+      ),
+    [usuarios, searchTerm]
   )
 
-  const usuariosActivos = filteredUsuarios.filter((u) => u.activo)
-  const usuariosInactivos = filteredUsuarios.filter((u) => !u.activo)
+  const usuariosActivos = useMemo(
+    () => filteredUsuarios.filter((u) => u.activo),
+    [filteredUsuarios]
+  )
+  const usuariosInactivos = useMemo(
+    () => filteredUsuarios.filter((u) => !u.activo),
+    [filteredUsuarios]
+  )
 
   const handleOpenDialog = useCallback((user?: User) => {
     if (user) {

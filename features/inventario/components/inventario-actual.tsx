@@ -6,6 +6,16 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Search, Package, Calendar, Filter, Download } from "lucide-react"
 import { useInventarioActual } from "../hooks/useInventarioActual"
+import { useMemo } from "react"
+import { usePagination } from "@/hooks/usePagination"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 
 interface InventarioActualProps {
   onBack?: () => void
@@ -26,6 +36,26 @@ export function InventarioActual({ onBack }: InventarioActualProps) {
     filteredInventario,
     exportToXLSX,
   } = useInventarioActual()
+
+  const gruposPorCliente = useMemo(
+    () => {
+      const map = filteredInventario.reduce(
+        (acc, item) => {
+          if (!acc[item.clienteId]) acc[item.clienteId] = { clienteNombre: item.clienteNombre, items: [] as typeof filteredInventario }
+          acc[item.clienteId].items.push(item)
+          return acc
+        },
+        {} as Record<string, { clienteNombre: string; items: typeof filteredInventario }>
+      )
+      return Object.entries(map).map(([clienteId, grupo]) => ({ clienteId, ...grupo }))
+    },
+    [filteredInventario]
+  )
+
+  const { page, pageCount, items: gruposPaginados, nextPage, prevPage, goToPage } = usePagination(
+    gruposPorCliente,
+    5
+  )
 
   return (
     <div className="flex flex-col min-h-full">
@@ -111,19 +141,12 @@ export function InventarioActual({ onBack }: InventarioActualProps) {
             No se encontraron registros
           </div>
         ) : (
-          // Agrupar por clienteId
-          Object.entries(
-            filteredInventario.reduce((acc, item) => {
-              if (!acc[item.clienteId]) acc[item.clienteId] = { clienteNombre: item.clienteNombre, items: [] }
-              acc[item.clienteId].items.push(item)
-              return acc
-            }, {} as Record<string, { clienteNombre: string; items: typeof filteredInventario }>)
-          ).map(([clienteId, grupo]) => (
-            <Card key={clienteId}>
+          gruposPaginados.map((grupo) => (
+            <Card key={grupo.clienteId}>
               <CardContent className="p-4">
                 <h3 className="font-bold text-lg text-foreground mb-2 flex items-center gap-2">
                   <Package className="h-5 w-5 text-primary" />
-                  {grupo.clienteNombre || `Cliente #${clienteId}`}
+                  {grupo.clienteNombre || `Cliente #${grupo.clienteId}`}
                 </h3>
                 <div className="overflow-x-auto">
                   <table className="min-w-full text-sm">
@@ -148,6 +171,50 @@ export function InventarioActual({ onBack }: InventarioActualProps) {
               </CardContent>
             </Card>
           ))
+        )}
+
+        {filteredInventario.length > 0 && pageCount > 1 && (
+          <div className="pt-4">
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      prevPage()
+                    }}
+                  />
+                </PaginationItem>
+                {Array.from({ length: pageCount }).map((_, index) => {
+                  const pageNumber = index + 1
+                  return (
+                    <PaginationItem key={pageNumber}>
+                      <PaginationLink
+                        href="#"
+                        isActive={pageNumber === page}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          goToPage(pageNumber)
+                        }}
+                      >
+                        {pageNumber}
+                      </PaginationLink>
+                    </PaginationItem>
+                  )
+                })}
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      nextPage()
+                    }}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
         )}
       </div>
     </div>

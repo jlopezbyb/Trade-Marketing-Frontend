@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import * as XLSX from "xlsx"
 import { getInventarioEstancado } from "@/lib/services/reportes.service"
 import type { InventarioEstancado } from "@/features/reportes/types"
@@ -11,8 +11,9 @@ export function useReporteEstancado() {
     getInventarioEstancado().then(setEstancados)
   }, [])
 
-  const filteredInventario = estancados.filter(
-    (item) => item.diasSinCambio >= parseInt(diasFilter)
+  const filteredInventario = useMemo(
+    () => estancados.filter((item) => item.diasSinCambio >= parseInt(diasFilter)),
+    [estancados, diasFilter]
   )
 
   const handleExportXLSX = useCallback(() => {

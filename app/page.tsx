@@ -5,6 +5,7 @@ import { useAppRouter } from "@/hooks/useAppRouter"
 import { LoginForm } from "@/features/auth"
 import { AppHeader } from "@/shared/layout/app-header"
 import { SupervisorSidebar } from "@/shared/layout/supervisor-sidebar"
+import { AppFooter } from "@/shared/layout/app-footer"
 import { DashboardField, DashboardSupervisor } from "@/features/dashboard"
 import { ClientesList } from "@/features/clientes"
 import { RegistrarVisita, HistorialVisitas } from "@/features/visitas"
@@ -126,6 +127,7 @@ function AppContent() {
         <div className="flex-1 flex flex-col min-w-0">
           <AppHeader />
           <main className="flex-1 overflow-auto">{renderPage()}</main>
+          <AppFooter />
         </div>
       </div>
     )
@@ -136,6 +138,7 @@ function AppContent() {
     <div className="min-h-screen flex flex-col bg-background">
       <AppHeader />
       <main className="flex-1">{renderPage()}</main>
+      <AppFooter />
     </div>
   )
 }

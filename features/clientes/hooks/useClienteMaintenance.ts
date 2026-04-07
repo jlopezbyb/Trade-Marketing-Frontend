@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { getClientes, createCliente, updateCliente, deleteCliente, getImageUrl } from "@/lib/services/clientes.service"
 import { toast } from "sonner"
 import type { Cliente } from "@/features/clientes/types"
@@ -30,15 +30,22 @@ export function useClienteMaintenance() {
     getClientes().then(setClientes)
   }, [])
 
-  const filteredClientes = clientes.filter(
-    (cliente) =>
-      cliente.activo &&
-      (cliente.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        cliente.direccion.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        cliente.contacto.toLowerCase().includes(searchTerm.toLowerCase()))
+  const filteredClientes = useMemo(
+    () =>
+      clientes.filter(
+        (cliente) =>
+          cliente.activo &&
+          (cliente.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            cliente.direccion.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            cliente.contacto.toLowerCase().includes(searchTerm.toLowerCase()))
+      ),
+    [clientes, searchTerm]
   )
 
-  const inactiveClientes = clientes.filter((cliente) => !cliente.activo)
+  const inactiveClientes = useMemo(
+    () => clientes.filter((cliente) => !cliente.activo),
+    [clientes]
+  )
 
   const handleOpenDialog = useCallback((cliente?: Cliente) => {
     if (cliente) {

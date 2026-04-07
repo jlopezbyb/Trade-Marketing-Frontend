@@ -17,6 +17,15 @@ import { useUsuarioMaintenance } from "../hooks/useUsuarioMaintenance"
 import { UsuarioCard } from "./usuario-card"
 import { UsuarioFormDialog } from "./usuario-form-dialog"
 import { AsignarClientesDialog } from "./asignar-clientes-dialog"
+import { usePagination } from "@/hooks/usePagination"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 
 export function GestionUsuarios() {
   const {
@@ -47,6 +56,24 @@ export function GestionUsuarios() {
     toggleCliente,
     getClienteNombres,
   } = useUsuarioMaintenance()
+
+  const {
+    page: pageActivos,
+    pageCount: pageCountActivos,
+    items: usuariosActivosPaginados,
+    nextPage: nextActivos,
+    prevPage: prevActivos,
+    goToPage: goToPageActivos,
+  } = usePagination(usuariosActivos, 8)
+
+  const {
+    page: pageInactivos,
+    pageCount: pageCountInactivos,
+    items: usuariosInactivosPaginados,
+    nextPage: nextInactivos,
+    prevPage: prevInactivos,
+    goToPage: goToPageInactivos,
+  } = usePagination(usuariosInactivos, 8)
 
   return (
     <div className="space-y-6 px-4 pt-6 sm:px-8 sm:pt-8">
@@ -80,7 +107,7 @@ export function GestionUsuarios() {
         </h3>
         {usuariosActivos.length > 0 ? (
           <div className="grid gap-3">
-            {usuariosActivos.map((user) => (
+            {usuariosActivosPaginados.map((user) => (
               <UsuarioCard
                 key={user.id}
                 user={user}
@@ -97,6 +124,50 @@ export function GestionUsuarios() {
         )}
       </div>
 
+      {usuariosActivos.length > 0 && pageCountActivos > 1 && (
+        <div className="pt-2">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    prevActivos()
+                  }}
+                />
+              </PaginationItem>
+              {Array.from({ length: pageCountActivos }).map((_, index) => {
+                const pageNumber = index + 1
+                return (
+                  <PaginationItem key={pageNumber}>
+                    <PaginationLink
+                      href="#"
+                      isActive={pageNumber === pageActivos}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        goToPageActivos(pageNumber)
+                      }}
+                    >
+                      {pageNumber}
+                    </PaginationLink>
+                  </PaginationItem>
+                )
+              })}
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    nextActivos()
+                  }}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
+
       {/* Inactive Users */}
       {usuariosInactivos.length > 0 && (
         <div className="space-y-3">
@@ -104,7 +175,7 @@ export function GestionUsuarios() {
             Usuarios Inactivos ({usuariosInactivos.length})
           </h3>
           <div className="grid gap-3">
-            {usuariosInactivos.map((user) => (
+            {usuariosInactivosPaginados.map((user) => (
               <UsuarioCard
                 key={user.id}
                 user={user}
@@ -114,6 +185,50 @@ export function GestionUsuarios() {
               />
             ))}
           </div>
+
+          {pageCountInactivos > 1 && (
+            <div className="pt-2">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        prevInactivos()
+                      }}
+                    />
+                  </PaginationItem>
+                  {Array.from({ length: pageCountInactivos }).map((_, index) => {
+                    const pageNumber = index + 1
+                    return (
+                      <PaginationItem key={pageNumber}>
+                        <PaginationLink
+                          href="#"
+                          isActive={pageNumber === pageInactivos}
+                          onClick={(e) => {
+                            e.preventDefault()
+                            goToPageInactivos(pageNumber)
+                          }}
+                        >
+                          {pageNumber}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )
+                  })}
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        nextInactivos()
+                      }}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </div>
       )}
 

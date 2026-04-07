@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import * as XLSX from "xlsx"
 import { getInventarioActual } from "@/lib/services/inventario.service"
 import { getClientes } from "@/lib/services/clientes.service"
@@ -22,14 +22,18 @@ export function useInventarioActual() {
     getProductos().then(setProductos)
   }, [])
 
-  const filteredInventario = inventario.filter((item) => {
-    const matchesSearch =
-      item.clienteNombre.toLowerCase().includes(search.toLowerCase()) ||
-      item.productoNombre.toLowerCase().includes(search.toLowerCase())
-    const matchesCliente = clienteFilter === "all" || item.clienteId === clienteFilter
-    const matchesProducto = productoFilter === "all" || item.productoId === productoFilter
-    return matchesSearch && matchesCliente && matchesProducto
-  })
+  const filteredInventario = useMemo(
+    () =>
+      inventario.filter((item) => {
+        const matchesSearch =
+          item.clienteNombre.toLowerCase().includes(search.toLowerCase()) ||
+          item.productoNombre.toLowerCase().includes(search.toLowerCase())
+        const matchesCliente = clienteFilter === "all" || item.clienteId === clienteFilter
+        const matchesProducto = productoFilter === "all" || item.productoId === productoFilter
+        return matchesSearch && matchesCliente && matchesProducto
+      }),
+    [inventario, search, clienteFilter, productoFilter]
+  )
 
   const exportToXLSX = useCallback(() => {
     const headers = ["Cliente", "Producto", "Cantidad", "Fecha"]

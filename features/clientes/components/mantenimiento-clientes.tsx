@@ -18,6 +18,15 @@ import { useClienteMaintenance } from "../hooks/useClienteMaintenance"
 import { getImageUrl } from "@/lib/services/clientes.service"
 import { ClienteCard } from "./cliente-card"
 import { ClienteFormDialog } from "./cliente-form-dialog"
+import { usePagination } from "@/hooks/usePagination"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 
 interface MantenimientoClientesProps {
   onBack?: () => void
@@ -50,6 +59,24 @@ export function MantenimientoClientes({ onBack }: MantenimientoClientesProps) {
     loading
   } = useClienteMaintenance()
 
+  const {
+    page: pageActivos,
+    pageCount: pageCountActivos,
+    items: clientesActivosPaginados,
+    nextPage: nextActivos,
+    prevPage: prevActivos,
+    goToPage: goToPageActivos,
+  } = usePagination(filteredClientes, 9)
+
+  const {
+    page: pageInactivos,
+    pageCount: pageCountInactivos,
+    items: clientesInactivosPaginados,
+    nextPage: nextInactivos,
+    prevPage: prevInactivos,
+    goToPage: goToPageInactivos,
+  } = usePagination(inactiveClientes, 6)
+
   return (
     <div className="p-4 space-y-4">
       <div className="flex items-center gap-4">
@@ -81,7 +108,7 @@ export function MantenimientoClientes({ onBack }: MantenimientoClientesProps) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredClientes.map((cliente) => (
+        {clientesActivosPaginados.map((cliente) => (
           <ClienteCard
             key={cliente.id}
             cliente={cliente}
@@ -90,6 +117,50 @@ export function MantenimientoClientes({ onBack }: MantenimientoClientesProps) {
           />
         ))}
       </div>
+
+      {filteredClientes.length > 0 && pageCountActivos > 1 && (
+        <div className="pt-4">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    prevActivos()
+                  }}
+                />
+              </PaginationItem>
+              {Array.from({ length: pageCountActivos }).map((_, index) => {
+                const pageNumber = index + 1
+                return (
+                  <PaginationItem key={pageNumber}>
+                    <PaginationLink
+                      href="#"
+                      isActive={pageNumber === pageActivos}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        goToPageActivos(pageNumber)
+                      }}
+                    >
+                      {pageNumber}
+                    </PaginationLink>
+                  </PaginationItem>
+                )
+              })}
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    nextActivos()
+                  }}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
 
       {filteredClientes.length === 0 && (
         <div className="text-center py-12">
@@ -102,7 +173,7 @@ export function MantenimientoClientes({ onBack }: MantenimientoClientesProps) {
         <div className="pt-6 border-t">
           <h3 className="font-semibold text-foreground mb-3">Clientes Inactivos ({inactiveClientes.length})</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {inactiveClientes.map((cliente) => (
+            {clientesInactivosPaginados.map((cliente) => (
               <Card key={cliente.id} className="overflow-hidden opacity-60">
                 <div className="aspect-video relative bg-muted">
                   {cliente.imagen ? (
@@ -132,6 +203,50 @@ export function MantenimientoClientes({ onBack }: MantenimientoClientesProps) {
               </Card>
             ))}
           </div>
+
+          {inactiveClientes.length > 0 && pageCountInactivos > 1 && (
+            <div className="pt-4">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        prevInactivos()
+                      }}
+                    />
+                  </PaginationItem>
+                  {Array.from({ length: pageCountInactivos }).map((_, index) => {
+                    const pageNumber = index + 1
+                    return (
+                      <PaginationItem key={pageNumber}>
+                        <PaginationLink
+                          href="#"
+                          isActive={pageNumber === pageInactivos}
+                          onClick={(e) => {
+                            e.preventDefault()
+                            goToPageInactivos(pageNumber)
+                          }}
+                        >
+                          {pageNumber}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )
+                  })}
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        nextInactivos()
+                      }}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </div>
       )}
 

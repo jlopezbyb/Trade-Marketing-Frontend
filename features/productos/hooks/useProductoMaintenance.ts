@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { getProductos, createProducto, updateProducto } from "@/lib/services/productos.service"
 import { toast } from "sonner"
 import type { Producto } from "@/features/productos/types"
@@ -28,14 +28,18 @@ export function useProductoMaintenance() {
     getProductos().then(setProductos)
   }, [])
 
-  const filteredProducts = productos.filter((producto) => {
-    const matchesSearch =
-      producto.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      producto.sku.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategoria =
-      filterCategoria === "all" || producto.categoria === filterCategoria
-    return matchesSearch && matchesCategoria
-  })
+  const filteredProducts = useMemo(
+    () =>
+      productos.filter((producto) => {
+        const matchesSearch =
+          producto.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          producto.sku.toLowerCase().includes(searchTerm.toLowerCase())
+        const matchesCategoria =
+          filterCategoria === "all" || producto.categoria === filterCategoria
+        return matchesSearch && matchesCategoria
+      }),
+    [productos, searchTerm, filterCategoria]
+  )
 
   const handleOpenDialog = useCallback((producto?: Producto) => {
     if (producto) {

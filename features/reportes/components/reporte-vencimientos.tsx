@@ -20,6 +20,15 @@ import {
   Building2,
 } from "lucide-react"
 import { useReporteVencimientos } from "../hooks/useReporteVencimientos"
+import { usePagination } from "@/hooks/usePagination"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 
 export function ReporteVencimientos() {
   const {
@@ -33,6 +42,11 @@ export function ReporteVencimientos() {
     getEstadoConfig,
     exportToXLSX,
   } = useReporteVencimientos()
+
+  const { page, pageCount, items: productosPaginados, nextPage, prevPage, goToPage } = usePagination(
+    productosFiltrados,
+    10
+  )
 
   return (
     <div className="space-y-6 px-4 pt-6 sm:px-8 sm:pt-8">
@@ -129,7 +143,7 @@ export function ReporteVencimientos() {
       {/* Products List */}
       <div className="space-y-3">
         {productosFiltrados.length > 0 ? (
-          productosFiltrados.map((producto) => {
+          productosPaginados.map((producto) => {
             const config = getEstadoConfig(producto.estado)
             const Icon = config.icon
             return (
@@ -186,6 +200,50 @@ export function ReporteVencimientos() {
               </p>
             </CardContent>
           </Card>
+        )}
+
+        {productosFiltrados.length > 0 && pageCount > 1 && (
+          <div className="pt-4">
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      prevPage()
+                    }}
+                  />
+                </PaginationItem>
+                {Array.from({ length: pageCount }).map((_, index) => {
+                  const pageNumber = index + 1
+                  return (
+                    <PaginationItem key={pageNumber}>
+                      <PaginationLink
+                        href="#"
+                        isActive={pageNumber === page}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          goToPage(pageNumber)
+                        }}
+                      >
+                        {pageNumber}
+                      </PaginationLink>
+                    </PaginationItem>
+                  )
+                })}
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      nextPage()
+                    }}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
         )}
       </div>
     </div>

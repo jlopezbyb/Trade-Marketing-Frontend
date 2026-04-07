@@ -1,5 +1,9 @@
 import { useRef, useCallback, useState, useEffect } from "react"
-import { getProductosPorVencer, getDashboardSummary } from "@/lib/services/reportes.service"
+import {
+  getProductosPorVencer,
+  getDashboardSummary,
+  getInventarioEstancado,
+} from "@/lib/services/reportes.service"
 import { getInventarioActual } from "@/lib/services/inventario.service"
 import { getClientes } from "@/lib/services/clientes.service"
 import { getVisitas } from "@/lib/services/visitas.service"
@@ -35,6 +39,13 @@ export function useDashboardSupervisor() {
         productosEstancados: res.inventarioEstancado ?? 0,
         totalInventario: res.totalInventario ?? 0,
       })
+    })
+    // Asegurar que "Estancados" use el conteo real del reporte
+    getInventarioEstancado().then((items) => {
+      setSummaryData((prev) => ({
+        ...prev,
+        productosEstancados: items.length,
+      }))
     })
     getInventarioActual().then((items) => {
       // Agrupar por productoNombre y sumar cantidades
