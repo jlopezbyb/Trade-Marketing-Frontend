@@ -1,5 +1,5 @@
 import { useRef, useCallback, useState, useEffect } from "react"
-import { getProductosPorVencer } from "@/lib/services/inventario.service"
+import { getProductosPorVencer } from "@/lib/services/reportes.service"
 import { getClientes } from "@/lib/services/clientes.service"
 import type { ProductoPorVencer, Cliente } from "@/lib/types"
 

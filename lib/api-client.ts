@@ -1,5 +1,59 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3500/api/v1"
 
+export const USE_MOCK = !process.env.NEXT_PUBLIC_API_BASE_URL
+
+// ---------------------------------------------------------------------------
+// Token management (module-level para que los servicios lo usen automáticamente)
+// ---------------------------------------------------------------------------
+
+let _authToken: string | null = null
+
+export function setAuthToken(token: string | null) {
+  _authToken = token
+}
+
+export function getAuthToken(): string | null {
+  return _authToken
+}
+
+// ---------------------------------------------------------------------------
+// Fetch helper
+// ---------------------------------------------------------------------------
+
+export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const headers = new Headers(options.headers)
+  if (_authToken && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${_authToken}`)
+  }
+  if (!headers.has("Content-Type") && options.body) {
+    headers.set("Content-Type", "application/json")
+  }
+
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers,
+    credentials: "include",
+  })
+
+  if (!res.ok) {
+    const errorBody = await res.text().catch(() => "")
+    throw new Error(errorBody || res.statusText)
+  }
+
+  if (res.status === 204) return undefined as T
+  return res.json()
+}
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+/** Respuesta paginada del backend */
+export interface PaginatedResponse<T> {
+  data: T[]
+  total: number
+}
+
 /** Respuesta de los endpoints de login */
 export interface AuthResponse {
   message: string
@@ -7,7 +61,18 @@ export interface AuthResponse {
   refreshToken: string
 }
 
-/** Respuesta del usuario autenticado */
+/** Respuesta cruda del endpoint /auth/me (snake_case del backend) */
+interface MeRawResponse {
+  id: string
+  email: string
+  nombre: string
+  rol: "field" | "supervisor"
+  activo: boolean
+  imagen_url?: string | null
+  clientes_asignados?: string[]
+}
+
+/** Respuesta mapeada del endpoint /auth/me */
 export interface MeResponse {
   id: string
   email: string
@@ -22,65 +87,39 @@ export interface MeResponse {
 // Auth endpoints
 // ---------------------------------------------------------------------------
 
-/** Login admin con credenciales locales */
-export async function loginLocal(email: string, password: string): Promise<AuthResponse> {
-  const res = await fetch(`${API_BASE}/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ email, password }),
-  })
-  if (!res.ok) throw new Error("Credenciales incorrectas")
-  return res.json()
-}
-
-/** Login admin con token de Entra ID */
-export async function loginEntraAdmin(entraAccessToken: string): Promise<AuthResponse> {
-  const res = await fetch(`${API_BASE}/auth/entra/login`, {
+/** Login con token de Entra ID — POST /auth/login */
+export async function loginWithEntra(entraAccessToken: string): Promise<AuthResponse> {
+  return apiFetch<AuthResponse>("/auth/login", {
     method: "POST",
     headers: { Authorization: `Bearer ${entraAccessToken}` },
-    credentials: "include",
-  })
-  if (!res.ok) throw new Error("Error al autenticar con Entra ID (admin)")
-  return res.json()
-}
-
-/** Login empleado con token de Entra ID */
-export async function loginEntraEmployee(entraAccessToken: string): Promise<AuthResponse> {
-  const res = await fetch(`${API_BASE}/auth/employee/entra/login`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${entraAccessToken}` },
-    credentials: "include",
-  })
-  if (!res.ok) throw new Error("Error al autenticar con Entra ID (empleado)")
-  return res.json()
-}
-
-/** Refresh del token del backend */
-export async function refreshBackendToken(): Promise<AuthResponse> {
-  const res = await fetch(`${API_BASE}/auth/refresh-token`, {
-    method: "POST",
-    credentials: "include",
-  })
-  if (!res.ok) throw new Error("No se pudo refrescar el token")
-  return res.json()
-}
-
-/** Logout en el backend */
-export async function logoutBackend(): Promise<void> {
-  await fetch(`${API_BASE}/auth/logout`, {
-    method: "POST",
-    credentials: "include",
   })
 }
 
-// ---------------------------------------------------------------------------
-// Helper para requests autenticados
-// ---------------------------------------------------------------------------
-
-export function authHeaders(token: string): Record<string, string> {
+/** Obtener usuario autenticado — GET /auth/me */
+export async function getMe(): Promise<MeResponse> {
+  const raw = await apiFetch<MeRawResponse>("/auth/me")
   return {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
+    id: raw.id,
+    email: raw.email,
+    name: raw.nombre,
+    role: raw.rol === "supervisor" ? "supervisor" : "field",
+    activo: raw.activo,
+    clientesAsignados: raw.clientes_asignados,
+    imagen: raw.imagen_url ?? undefined,
   }
+}
+
+/** Refrescar token — POST /auth/refresh-token */
+export async function refreshBackendToken(): Promise<AuthResponse> {
+  return apiFetch<AuthResponse>("/auth/refresh-token", { method: "POST" })
+}
+
+/** Cerrar sesión — POST /auth/logout */
+export async function logoutBackend(): Promise<void> {
+  await apiFetch<void>("/auth/logout", { method: "POST" })
+}
+
+/** Health check — GET /health */
+export async function healthCheck(): Promise<{ status: string }> {
+  return apiFetch<{ status: string }>("/health")
 }

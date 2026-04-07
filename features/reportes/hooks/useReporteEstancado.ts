@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react"
-import { getInventarioEstancado } from "@/lib/services/inventario.service"
+import { getInventarioEstancado } from "@/lib/services/reportes.service"
 import type { InventarioEstancado } from "@/lib/types"
 
 export function useReporteEstancado() {

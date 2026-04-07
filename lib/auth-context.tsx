@@ -14,14 +14,16 @@ import {
   InteractionStatus,
   type AuthenticationResult,
 } from "@azure/msal-browser"
-import type { User, UserRole } from "./types"
+import type { User } from "./types"
 import { mockUsers } from "./mock-data"
 import { getMsalInstance, isMsalConfigured, loginRequest, msalRedirectResult } from "./msal-config"
 import {
-  loginLocal,
-  loginEntraAdmin,
+  loginWithEntra,
   logoutBackend,
   refreshBackendToken,
+  getMe,
+  setAuthToken,
+  USE_MOCK,
   type AuthResponse,
 } from "./api-client"
 
@@ -60,19 +62,6 @@ function decodeJwtPayload(token: string): { exp?: number } | null {
   }
 }
 
-/** Mapea la respuesta del backend a la interfaz User del dominio */
-function mapAuthResponseToUser(authRes: AuthResponse, email: string, name: string): User {
-  const payload = decodeJwtPayload(authRes.token) as Record<string, unknown> | null
-  const tokenRole = payload?.role as string | undefined
-  return {
-    id: (payload?.sub as string) ?? "",
-    email,
-    name,
-    role: tokenRole === "supervisor" ? "supervisor" : "field",
-    activo: true,
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Mock passwords (desarrollo — se usa cuando el backend aún no está conectado)
 // ---------------------------------------------------------------------------
@@ -83,8 +72,6 @@ const mockPasswords: Record<string, string> = {
   "campo2@byb.com": "demo123",
   "campo3@byb.com": "demo123",
 }
-
-const USE_MOCK = !process.env.NEXT_PUBLIC_API_BASE_URL
 
 // ---------------------------------------------------------------------------
 // Provider
@@ -116,12 +103,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const res = await refreshBackendToken()
         setBackendToken(res.token)
         setRefreshToken(res.refreshToken)
+        setAuthToken(res.token)
         scheduleRefresh(res.token)
       } catch {
         // Si falla el refresh, cerrar sesión
         setUser(null)
         setBackendToken(null)
         setRefreshToken(null)
+        setAuthToken(null)
       }
     }, expiresInMs)
   }, [])
@@ -133,14 +122,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // ---- Almacenar tokens del backend ----
+  // ---- Almacenar tokens y obtener datos del usuario ----
   const handleAuthResponse = useCallback(
-    (res: AuthResponse, email: string, name: string) => {
-      const mappedUser = mapAuthResponseToUser(res, email, name)
-      setUser(mappedUser)
+    async (res: AuthResponse) => {
       setBackendToken(res.token)
       setRefreshToken(res.refreshToken)
+      setAuthToken(res.token)
       scheduleRefresh(res.token)
+
+      try {
+        const me = await getMe()
+        setUser({
+          id: me.id,
+          email: me.email,
+          name: me.name,
+          role: me.role,
+          activo: me.activo,
+          clientesAsignados: me.clientesAsignados,
+          imagen: me.imagen,
+        })
+      } catch {
+        // Fallback: leer datos del JWT
+        const payload = decodeJwtPayload(res.token) as Record<string, unknown> | null
+        setUser({
+          id: (payload?.sub as string) ?? "",
+          email: (payload?.email as string) ?? "",
+          name: (payload?.name as string) ?? "",
+          role: payload?.role === "supervisor" ? "supervisor" : "field",
+          activo: true,
+        })
+      }
     },
     [scheduleRefresh]
   )
@@ -173,10 +184,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           })
           console.log("✅ Inicio de sesión exitoso (mock) —", name, "(", email, ")")
         } else {
-          // Enviar token al backend — el rol viene en el JWT de respuesta
-          loginEntraAdmin(entraToken).then((res) => {
+          // Enviar token al backend — el rol viene del endpoint /auth/me
+          loginWithEntra(entraToken).then(async (res) => {
             if (cancelled) return
-            handleAuthResponse(res, email, name)
+            await handleAuthResponse(res)
             console.log("✅ Inicio de sesión exitoso —", name, "(", email, ")")
           }).catch((err) => {
             console.error("❌ Error al autenticar con el backend:", err)
@@ -209,16 +220,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return false
       }
 
-      // Producción: POST /api/v1/auth/login
-      try {
-        const res = await loginLocal(email, password)
-        handleAuthResponse(res, email, email)
-        setIsLoading(false)
-        return true
-      } catch {
-        setIsLoading(false)
-        return false
-      }
+      // En producción solo se usa Entra ID (loginWithEntraId)
+      setIsLoading(false)
+      return false
     },
     [handleAuthResponse]
   )
@@ -283,6 +287,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null)
     setBackendToken(null)
     setRefreshToken(null)
+    setAuthToken(null)
 
     // Logout de MSAL (redirect — limpia sesión en Microsoft)
     const instance = getMsalInstance()
