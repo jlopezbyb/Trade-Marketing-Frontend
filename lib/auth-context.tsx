@@ -26,6 +26,7 @@ import {
   USE_MOCK,
   type AuthResponse,
 } from "./api-client"
+import { setCurrentUserRole } from "./auth-role"
 
 // ---------------------------------------------------------------------------
 // Cookie helpers
@@ -195,6 +196,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           imagen: me.imagen,
         }
         setUser(userObj)
+        setCurrentUserRole(userObj.role)
         // eslint-disable-next-line no-console
         console.log("[AUTH] setUser (handleAuthResponse/getMe):", userObj)
       } catch {
@@ -214,6 +216,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           activo: true,
         }
         setUser(userObj)
+        setCurrentUserRole(userObj.role)
         // eslint-disable-next-line no-console
         console.log("[AUTH] setUser (handleAuthResponse/JWT):", userObj)
       }
@@ -262,6 +265,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           imagen: me.imagen,
         }
         setUser(userObj)
+        setCurrentUserRole(userObj.role)
         // eslint-disable-next-line no-console
         console.log("[AUTH] Sesión restaurada desde token (getMe):", userObj)
       } catch {
@@ -279,6 +283,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // eslint-disable-next-line no-console
         console.log("[AUTH] Sesión restaurada desde token (JWT):", userObj)
         setUser(userObj)
+        setCurrentUserRole(userObj.role)
       } finally {
         if (!cancelled) setIsRestoring(false)
       }
@@ -319,6 +324,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             activo: true,
           }
           setUser(mockUser)
+          setCurrentUserRole(mockUser.role)
           // eslint-disable-next-line no-console
           console.log("✅ Inicio de sesión exitoso (mock) —", name, "(", email, ")")
         } else {
@@ -357,6 +363,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const expectedPassword = mockPasswords[email.toLowerCase()]
         if (foundUser && expectedPassword === password) {
           setUser(foundUser)
+          setCurrentUserRole(foundUser.role)
           setIsLoading(false)
           return true
         }
@@ -419,6 +426,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
     setUser(null)
+    setCurrentUserRole(null)
     setBackendToken(null)
     setRefreshToken(null)
     setAuthToken(null)

@@ -1,6 +1,7 @@
 import { apiFetch, USE_MOCK, type PaginatedResponse } from "@/lib/api-client"
 import type { User, Cliente } from "@/lib/types"
 import { mockUsers } from "@/lib/mock-data"
+import { assertPermission } from "@/lib/permissions"
 
 // ---------------------------------------------------------------------------
 // Mapper
@@ -34,18 +35,21 @@ function mapUser(raw: UserAPI): User {
 // ---------------------------------------------------------------------------
 
 export async function getUsuarios(): Promise<User[]> {
+  assertPermission("usuarios", "ver")
   if (USE_MOCK) return mockUsers
   const res = await apiFetch<PaginatedResponse<UserAPI>>("/users")
   return res.data.map(mapUser)
 }
 
 export async function getUsuarioById(id: string): Promise<User | undefined> {
+  assertPermission("usuarios", "ver")
   if (USE_MOCK) return mockUsers.find((u) => u.id === id)
   const raw = await apiFetch<UserAPI>(`/users/${encodeURIComponent(id)}`)
   return mapUser(raw)
 }
 
 export async function createUsuario(data: Omit<User, "id">): Promise<User> {
+  assertPermission("usuarios", "crear")
   if (USE_MOCK) {
     const nuevo: User = { ...data, id: String(Date.now()) }
     mockUsers.push(nuevo)
@@ -59,6 +63,7 @@ export async function createUsuario(data: Omit<User, "id">): Promise<User> {
 }
 
 export async function updateUsuario(id: string, data: Partial<User>): Promise<User> {
+  assertPermission("usuarios", "editar")
   if (USE_MOCK) {
     const idx = mockUsers.findIndex((u) => u.id === id)
     if (idx === -1) throw new Error("Usuario no encontrado")
@@ -73,6 +78,7 @@ export async function updateUsuario(id: string, data: Partial<User>): Promise<Us
 }
 
 export async function deleteUsuario(id: string): Promise<void> {
+  assertPermission("usuarios", "eliminar")
   if (USE_MOCK) {
     const idx = mockUsers.findIndex((u) => u.id === id)
     if (idx !== -1) mockUsers.splice(idx, 1)
@@ -82,10 +88,12 @@ export async function deleteUsuario(id: string): Promise<void> {
 }
 
 export async function getUsuarioClientes(id: string): Promise<Cliente[]> {
+  assertPermission("usuarios", "ver")
   return apiFetch<Cliente[]>(`/users/${encodeURIComponent(id)}/clientes`)
 }
 
 export async function assignClientesToUsuario(id: string, clienteIds: string[]): Promise<void> {
+  assertPermission("usuarios", "editar")
   return apiFetch<void>(`/users/${encodeURIComponent(id)}/clientes`, {
     method: "PUT",
     body: JSON.stringify({ clienteIds }),

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { getCategorias, createCategoria, updateCategoria, deleteCategoria } from "@/lib/services/categorias.service"
 import { toast } from "sonner"
+import { isPermissionError } from "@/lib/permissions"
 import type { Categoria } from "@/features/categorias/types"
 
 const emptyForm = {
@@ -82,7 +83,11 @@ export function useCategoriaMaintenance() {
         toast.success("Categoría creada correctamente")
       }
     } catch (e: any) {
-      toast.error("Error al guardar la categoría" + (e?.message ? ": " + e.message : ""))
+      if (isPermissionError(e)) {
+        toast.error("No tienes permisos para administrar categorías.")
+      } else {
+        toast.error("Error al guardar la categoría" + (e?.message ? ": " + e.message : ""))
+      }
       return
     }
     setIsDialogOpen(false)
@@ -97,7 +102,11 @@ export function useCategoriaMaintenance() {
       setCategorias((prev) => prev.map((c) => c.id === id ? updated : c))
       toast.success("Estado actualizado")
     } catch (e: any) {
-      toast.error("Error al actualizar estado" + (e?.message ? ": " + e.message : ""))
+      if (isPermissionError(e)) {
+        toast.error("No tienes permisos para actualizar categorías.")
+      } else {
+        toast.error("Error al actualizar estado" + (e?.message ? ": " + e.message : ""))
+      }
     }
   }, [categorias])
 
@@ -113,7 +122,11 @@ export function useCategoriaMaintenance() {
         setCategorias((prev) => prev.filter((c) => c.id !== categoriaToDelete.id))
         toast.success("Categoría eliminada")
       } catch (e: any) {
-        toast.error("Error al eliminar la categoría" + (e?.message ? ": " + e.message : ""))
+        if (isPermissionError(e)) {
+          toast.error("No tienes permisos para eliminar categorías.")
+        } else {
+          toast.error("Error al eliminar la categoría" + (e?.message ? ": " + e.message : ""))
+        }
       }
     }
     setIsDeleteDialogOpen(false)

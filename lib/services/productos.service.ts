@@ -10,6 +10,7 @@ export function getProductoImageUrl(imagen: string | undefined) {
 import { apiFetch, USE_MOCK, type PaginatedResponse } from "@/lib/api-client"
 import type { Producto } from "@/lib/types"
 import { mockProductos } from "@/lib/mock-data"
+import { assertPermission } from "@/lib/permissions"
 
 // ---------------------------------------------------------------------------
 // Mapper
@@ -57,6 +58,7 @@ export async function getProductoById(id: string): Promise<Producto | undefined>
 
 // Si isFormData es true, data debe ser FormData y se envía como multipart
 export async function createProducto(data: any, isFormData = false): Promise<Producto> {
+  assertPermission("productos", "crear")
   if (USE_MOCK) {
     const nuevo: Producto = { ...data, id: String(Date.now()) }
     mockProductos.push(nuevo)
@@ -76,6 +78,7 @@ export async function createProducto(data: any, isFormData = false): Promise<Pro
 }
 
 export async function updateProducto(id: string, data: any, isFormData = false): Promise<Producto> {
+  assertPermission("productos", "editar")
   if (USE_MOCK) {
     const idx = mockProductos.findIndex((p) => p.id === id)
     if (idx === -1) throw new Error("Producto no encontrado")
@@ -95,6 +98,7 @@ export async function updateProducto(id: string, data: any, isFormData = false):
 }
 
 export async function deleteProducto(id: string): Promise<void> {
+  assertPermission("productos", "eliminar")
   if (USE_MOCK) {
     const idx = mockProductos.findIndex((p) => p.id === id)
     if (idx !== -1) mockProductos.splice(idx, 1)

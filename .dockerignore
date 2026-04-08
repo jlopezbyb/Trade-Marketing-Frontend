@@ -1,0 +1,12 @@
+.git
+.gitignore
+node_modules
+.pnpm-store
+.next
+out
+dist
+coverage
+*.log
+Dockerfile
+docker-compose.yml
+nginx.conf

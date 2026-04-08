@@ -1,6 +1,7 @@
 import { apiFetch, USE_MOCK, type PaginatedResponse } from "@/lib/api-client"
 import type { InventarioItem } from "@/lib/types"
 import { mockInventarioActual } from "@/lib/mock-data"
+import { assertPermission } from "@/lib/permissions"
 
 // ---------------------------------------------------------------------------
 // Mapper
@@ -40,6 +41,7 @@ function mapInventario(raw: any): InventarioItem {
 // ---------------------------------------------------------------------------
 
 export async function getInventarioActual(): Promise<InventarioItem[]> {
+  assertPermission("inventario", "ver")
   if (USE_MOCK) return mockInventarioActual
   const res = await apiFetch<PaginatedResponse<InventarioAPI>>("/inventario")
   return res.data.map(mapInventario)
@@ -61,6 +63,7 @@ export interface InventarioPayload {
 }
 
 export async function createInventario(payload: InventarioPayload): Promise<void> {
+  assertPermission("inventario", "crear")
   if (USE_MOCK) {
     // Simulación: no hace nada
     return
@@ -73,6 +76,7 @@ export async function createInventario(payload: InventarioPayload): Promise<void
 }
 
 export async function updateInventario(id: string, data: Partial<InventarioItem>): Promise<InventarioItem> {
+  assertPermission("inventario", "editar")
   if (USE_MOCK) {
     const idx = mockInventarioActual.findIndex((i) => i.id === id)
     if (idx === -1) throw new Error("Registro de inventario no encontrado")
@@ -87,6 +91,7 @@ export async function updateInventario(id: string, data: Partial<InventarioItem>
 }
 
 export async function deleteInventario(id: string): Promise<void> {
+  assertPermission("inventario", "eliminar")
   if (USE_MOCK) {
     const idx = mockInventarioActual.findIndex((i) => i.id === id)
     if (idx !== -1) mockInventarioActual.splice(idx, 1)

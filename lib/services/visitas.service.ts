@@ -1,6 +1,7 @@
 import { apiFetch, USE_MOCK, type PaginatedResponse } from "@/lib/api-client"
 import type { Visita } from "@/lib/types"
 import { mockVisitas } from "@/lib/mock-data"
+import { assertPermission } from "@/lib/permissions"
 
 // ---------------------------------------------------------------------------
 // Mapper
@@ -31,18 +32,21 @@ function mapVisita(raw: VisitaAPI): Visita {
 // ---------------------------------------------------------------------------
 
 export async function getVisitas(): Promise<Visita[]> {
+  assertPermission("visitas", "ver")
   if (USE_MOCK) return mockVisitas
   const res = await apiFetch<PaginatedResponse<VisitaAPI>>("/visitas")
   return res.data.map(mapVisita)
 }
 
 export async function getVisitasByUsuario(usuarioId: string): Promise<Visita[]> {
+  assertPermission("visitas", "ver")
   if (USE_MOCK) return mockVisitas.filter((v) => v.usuarioId === usuarioId)
   const res = await apiFetch<PaginatedResponse<VisitaAPI>>(`/visitas?usuarioId=${encodeURIComponent(usuarioId)}`)
   return res.data.map(mapVisita)
 }
 
 export async function createVisita(data: Omit<Visita, "id">): Promise<Visita> {
+  assertPermission("visitas", "crear")
   if (USE_MOCK) {
     const nueva: Visita = { ...data, id: String(Date.now()) }
     mockVisitas.push(nueva)
@@ -62,6 +66,7 @@ export async function createVisita(data: Omit<Visita, "id">): Promise<Visita> {
 }
 
 export async function updateVisita(id: string, data: Partial<Visita>): Promise<Visita> {
+  assertPermission("visitas", "editar")
   if (USE_MOCK) {
     const idx = mockVisitas.findIndex((v) => v.id === id)
     if (idx === -1) throw new Error("Visita no encontrada")
@@ -76,6 +81,7 @@ export async function updateVisita(id: string, data: Partial<Visita>): Promise<V
 }
 
 export async function deleteVisita(id: string): Promise<void> {
+  assertPermission("visitas", "eliminar")
   if (USE_MOCK) {
     const idx = mockVisitas.findIndex((v) => v.id === id)
     if (idx !== -1) mockVisitas.splice(idx, 1)

@@ -2,7 +2,7 @@
 
 import { AuthProvider, useAuth } from "@/lib/auth-context"
 import { useAppRouter } from "@/hooks/useAppRouter"
-import { LoginForm } from "@/features/auth"
+import { LoginForm, UnauthorizedScreen } from "@/features/auth"
 import { AppHeader } from "@/shared/layout/app-header"
 import { SupervisorSidebar } from "@/shared/layout/supervisor-sidebar"
 import { AppFooter } from "@/shared/layout/app-footer"
@@ -15,6 +15,7 @@ import { MantenimientoProductos } from "@/features/productos"
 import { MantenimientoClientes } from "@/features/clientes"
 import { MantenimientoCategorias } from "@/features/categorias"
 import { GestionUsuarios } from "@/features/usuarios"
+import { can } from "@/lib/permissions"
 
 // import { useEffect } from "react"
 // import { useRouter } from "next/navigation"
@@ -32,8 +33,29 @@ function AppContent() {
     backToDashboard,
   } = useAppRouter()
 
+  const isUnauthorizedForCurrentPage = () => {
+    if (!user) return false
+
+    switch (currentPage) {
+      case "mantenimiento-productos":
+        return !can(user.role, "productos", "editar")
+      case "mantenimiento-clientes":
+        return !can(user.role, "clientes", "editar")
+      case "mantenimiento-categorias":
+        return !can(user.role, "categorias", "editar")
+      case "gestion-usuarios":
+        return !can(user.role, "usuarios", "ver")
+      default:
+        return false
+    }
+  }
+
   const renderPage = () => {
     if (!user) return null
+
+    if (isUnauthorizedForCurrentPage()) {
+      return <UnauthorizedScreen onBack={backToDashboard} />
+    }
 
     switch (currentPage) {
       case "clientes":

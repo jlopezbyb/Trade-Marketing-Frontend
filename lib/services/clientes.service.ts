@@ -1,6 +1,7 @@
 import { apiFetch, USE_MOCK, type PaginatedResponse } from "@/lib/api-client"
 import type { Cliente } from "@/lib/types"
 import { mockClientes } from "@/lib/mock-data"
+import { assertPermission } from "@/lib/permissions"
 
 // ---------------------------------------------------------------------------
 // Mapper: snake_case del backend → camelCase del frontend
@@ -50,6 +51,7 @@ export async function getClienteById(id: string): Promise<Cliente | undefined> {
 
 
 export async function createCliente(data: FormData): Promise<Cliente> {
+  assertPermission("clientes", "crear")
   const raw = await apiFetch<ClienteAPI>("/clientes", {
     method: "POST",
     body: data,
@@ -59,6 +61,7 @@ export async function createCliente(data: FormData): Promise<Cliente> {
 
 
 export async function updateCliente(id: string, data: FormData): Promise<Cliente> {
+  assertPermission("clientes", "editar")
   const raw = await apiFetch<ClienteAPI>(`/clientes/${encodeURIComponent(id)}`, {
     method: "PUT",
     body: data,
@@ -76,6 +79,7 @@ export function getImageUrl(imagen: string | undefined) {
 }
 
 export async function deleteCliente(id: string): Promise<void> {
+  assertPermission("clientes", "eliminar")
   if (USE_MOCK) {
     const idx = mockClientes.findIndex((c) => c.id === id)
     if (idx !== -1) mockClientes.splice(idx, 1)

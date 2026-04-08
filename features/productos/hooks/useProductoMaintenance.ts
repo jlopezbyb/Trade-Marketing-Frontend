@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { getProductos, createProducto, updateProducto } from "@/lib/services/productos.service"
 import { toast } from "sonner"
+import { isPermissionError } from "@/lib/permissions"
 import type { Producto } from "@/features/productos/types"
 
 const emptyForm = {
@@ -89,7 +90,11 @@ export function useProductoMaintenance() {
         toast.success("Producto creado correctamente")
       }
     } catch (e: any) {
-      toast.error("Error al guardar el producto" + (e?.message ? ": " + e.message : ""))
+      if (isPermissionError(e)) {
+        toast.error("No tienes permisos para administrar productos.")
+      } else {
+        toast.error("Error al guardar el producto" + (e?.message ? ": " + e.message : ""))
+      }
       return
     }
     setIsDialogOpen(false)
@@ -109,7 +114,11 @@ export function useProductoMaintenance() {
         setProductos((prev) => prev.filter((p) => p.id !== productToDelete.id))
         toast.success("Producto eliminado correctamente")
       } catch (e: any) {
-        toast.error("Error al eliminar el producto" + (e?.message ? ": " + e.message : ""))
+        if (isPermissionError(e)) {
+          toast.error("No tienes permisos para eliminar productos.")
+        } else {
+          toast.error("Error al eliminar el producto" + (e?.message ? ": " + e.message : ""))
+        }
       }
       setIsDeleteDialogOpen(false)
       setProductToDelete(null)

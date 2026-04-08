@@ -6,6 +6,8 @@ import {
   deleteInventario,
   type InventarioPayload,
 } from "@/lib/services/inventario.service"
+import { toast } from "sonner"
+import { isPermissionError } from "@/lib/permissions"
 import type { InventarioItem } from "@/features/inventario/types"
 import type { LoteInventario } from "@/features/inventario/types"
 import type { Producto } from "@/features/productos/types"
@@ -151,8 +153,12 @@ export function useRegistroInventario() {
       }
       await createInventario(payload)
       setSuccess(true)
-    } catch (err) {
-      // TODO: Manejar error con toast
+    } catch (err: any) {
+      if (isPermissionError(err)) {
+        toast.error("No tienes permisos para registrar inventario.")
+      } else {
+        toast.error("Error al registrar el inventario" + (err?.message ? ": " + err.message : ""))
+      }
       // eslint-disable-next-line no-console
       console.error(err)
     }
@@ -160,11 +166,29 @@ export function useRegistroInventario() {
 
   // CRUD helpers para edición/eliminación futura
   const editarInventario = useCallback(async (id: string, data: Partial<InventarioItem>) => {
-    await updateInventario(id, data)
+    try {
+      await updateInventario(id, data)
+      toast.success("Inventario actualizado correctamente")
+    } catch (err: any) {
+      if (isPermissionError(err)) {
+        toast.error("No tienes permisos para editar inventario.")
+      } else {
+        toast.error("Error al actualizar inventario" + (err?.message ? ": " + err.message : ""))
+      }
+    }
   }, [])
 
   const eliminarInventario = useCallback(async (id: string) => {
-    await deleteInventario(id)
+    try {
+      await deleteInventario(id)
+      toast.success("Inventario eliminado correctamente")
+    } catch (err: any) {
+      if (isPermissionError(err)) {
+        toast.error("No tienes permisos para eliminar inventario.")
+      } else {
+        toast.error("Error al eliminar inventario" + (err?.message ? ": " + err.message : ""))
+      }
+    }
   }, [])
 
   return {
