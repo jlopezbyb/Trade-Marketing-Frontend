@@ -27,6 +27,7 @@ interface UsuarioFormData {
   email: string
   role: UserRole
   imagen: string
+  employeeCode: string
 }
 
 interface UsuarioFormDialogProps {
@@ -81,6 +82,17 @@ export function UsuarioFormDialog({
           </div>
 
           <div>
+            <Label>Código de empleado</Label>
+            <Input
+              value={formData.employeeCode}
+              onChange={(e) =>
+                setFormData({ ...formData, employeeCode: e.target.value })
+              }
+              placeholder="Ej: EMP001"
+            />
+          </div>
+
+          <div>
             <Label>Rol</Label>
             <Select
               value={formData.role}
@@ -92,7 +104,7 @@ export function UsuarioFormDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="field">Usuario de Campo</SelectItem>
+                <SelectItem value="field">De Campo</SelectItem>
                 <SelectItem value="supervisor">Supervisor</SelectItem>
               </SelectContent>
             </Select>
@@ -112,7 +124,12 @@ export function UsuarioFormDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={onSave} disabled={!formData.name || !formData.email}>
+          <Button
+            onClick={onSave}
+            disabled={
+              !formData.name || !formData.email || !formData.employeeCode
+            }
+          >
             {editingUser ? "Guardar Cambios" : "Crear Usuario"}
           </Button>
         </DialogFooter>

@@ -1,14 +1,23 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
-import { getUsuarios } from "@/lib/services/usuarios.service"
+import {
+  getUsuarios,
+  createUsuario,
+  updateUsuario,
+  deleteUsuario,
+  assignClientesToUsuario,
+} from "@/lib/services/usuarios.service"
 import { getClientes } from "@/lib/services/clientes.service"
 import type { User, UserRole } from "@/features/usuarios/types"
 import type { Cliente } from "@/features/clientes/types"
+import { toast } from "sonner"
+import { isPermissionError } from "@/lib/permissions"
 
 const emptyForm = {
   name: "",
   email: "",
   role: "field" as UserRole,
   imagen: "",
+  employeeCode: "",
 }
 
 export function useUsuarioMaintenance() {
@@ -56,6 +65,7 @@ export function useUsuarioMaintenance() {
         email: user.email,
         role: user.role,
         imagen: user.imagen || "",
+        employeeCode: user.employeeCode || "",
       })
     } else {
       setEditingUser(null)
@@ -64,34 +74,41 @@ export function useUsuarioMaintenance() {
     setShowDialog(true)
   }, [])
 
-  const handleSave = useCallback(() => {
-    if (editingUser) {
-      setUsuarios((prev) =>
-        prev.map((u) =>
-          u.id === editingUser.id
-            ? {
-                ...u,
-                name: formData.name,
-                email: formData.email,
-                role: formData.role,
-                imagen: formData.imagen,
-              }
-            : u
-        )
-      )
-    } else {
-      const newUser: User = {
-        id: Date.now().toString(),
-        name: formData.name,
-        email: formData.email,
-        role: formData.role,
-        activo: true,
-        clientesAsignados: [],
-        imagen: formData.imagen,
+  const handleSave = useCallback(async () => {
+    if (!formData.name || !formData.email || !formData.employeeCode) return
+
+    try {
+      if (editingUser) {
+        const updated = await updateUsuario(editingUser.id, {
+          name: formData.name,
+          email: formData.email,
+          role: formData.role,
+          imagen: formData.imagen,
+          employeeCode: formData.employeeCode,
+        })
+        setUsuarios((prev) => prev.map((u) => (u.id === updated.id ? updated : u)))
+        toast.success("Usuario actualizado correctamente")
+      } else {
+        const nuevo = await createUsuario({
+          name: formData.name,
+          email: formData.email,
+          role: formData.role,
+          activo: true,
+          clientesAsignados: [],
+          imagen: formData.imagen || undefined,
+          employeeCode: formData.employeeCode,
+        } as Omit<User, "id">)
+        setUsuarios((prev) => [...prev, nuevo])
+        toast.success("Usuario creado correctamente")
       }
-      setUsuarios((prev) => [...prev, newUser])
+      setShowDialog(false)
+    } catch (e: any) {
+      if (isPermissionError(e)) {
+        toast.error("No tienes permisos para administrar usuarios.")
+      } else {
+        toast.error("Error al guardar el usuario" + (e?.message ? ": " + e.message : ""))
+      }
     }
-    setShowDialog(false)
   }, [formData, editingUser])
 
   const handleToggleActivo = useCallback((userId: string) => {
@@ -105,9 +122,20 @@ export function useUsuarioMaintenance() {
     setShowDeleteDialog(true)
   }, [])
 
-  const handleDelete = useCallback(() => {
-    if (userToDelete) {
+  const handleDelete = useCallback(async () => {
+    if (!userToDelete) return
+
+    try {
+      await deleteUsuario(userToDelete.id)
       setUsuarios((prev) => prev.filter((u) => u.id !== userToDelete.id))
+      toast.success("Usuario eliminado correctamente")
+    } catch (e: any) {
+      if (isPermissionError(e)) {
+        toast.error("No tienes permisos para eliminar usuarios.")
+      } else {
+        toast.error("Error al eliminar el usuario" + (e?.message ? ": " + e.message : ""))
+      }
+    } finally {
       setShowDeleteDialog(false)
       setUserToDelete(null)
     }
@@ -119,8 +147,11 @@ export function useUsuarioMaintenance() {
     setShowAsignarDialog(true)
   }, [])
 
-  const handleSaveAsignacion = useCallback(() => {
-    if (userToAsignar) {
+  const handleSaveAsignacion = useCallback(async () => {
+    if (!userToAsignar) return
+
+    try {
+      await assignClientesToUsuario(userToAsignar.id, clientesSeleccionados)
       setUsuarios((prev) =>
         prev.map((u) =>
           u.id === userToAsignar.id
@@ -128,8 +159,15 @@ export function useUsuarioMaintenance() {
             : u
         )
       )
+      toast.success("Asignaciones actualizadas correctamente")
       setShowAsignarDialog(false)
       setUserToAsignar(null)
+    } catch (e: any) {
+      if (isPermissionError(e)) {
+        toast.error("No tienes permisos para asignar clientes.")
+      } else {
+        toast.error("Error al asignar clientes" + (e?.message ? ": " + e.message : ""))
+      }
     }
   }, [userToAsignar, clientesSeleccionados])
 

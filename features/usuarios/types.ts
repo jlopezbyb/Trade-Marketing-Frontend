@@ -8,4 +8,5 @@ export interface User {
   activo: boolean
   clientesAsignados?: string[]
   imagen?: string
+  employeeCode?: string
 }

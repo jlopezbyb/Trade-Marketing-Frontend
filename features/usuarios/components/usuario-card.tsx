@@ -34,7 +34,7 @@ export function UsuarioCard({ user, onEdit, onToggleActivo, onAsignarClientes }:
             <div className="flex items-center gap-2 mb-1">
               <h3 className="font-semibold truncate">{user.name}</h3>
               <Badge variant={user.role === "supervisor" ? "default" : "secondary"}>
-                {user.role === "supervisor" ? "Supervisor" : "Campo"}
+                {user.role === "supervisor" ? "Supervisor" : "De Campo"}
               </Badge>
               {!user.activo && <Badge variant="outline">Inactivo</Badge>}
             </div>

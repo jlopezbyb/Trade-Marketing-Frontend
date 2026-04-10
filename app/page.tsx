@@ -7,14 +7,14 @@ import { AppHeader } from "@/shared/layout/app-header"
 import { SupervisorSidebar } from "@/shared/layout/supervisor-sidebar"
 import { AppFooter } from "@/shared/layout/app-footer"
 import { DashboardField, DashboardSupervisor } from "@/features/dashboard"
-import { ClientesList } from "@/features/clientes"
+import { ClientesList, ClientesAsignadosField } from "@/features/clientes"
 import { RegistrarVisita, HistorialVisitas } from "@/features/visitas"
 import { RegistroInventario, InventarioActual } from "@/features/inventario"
 import { ReporteEstancado, ReporteVencimientos } from "@/features/reportes"
 import { MantenimientoProductos } from "@/features/productos"
 import { MantenimientoClientes } from "@/features/clientes"
 import { MantenimientoCategorias } from "@/features/categorias"
-import { GestionUsuarios } from "@/features/usuarios"
+import { GestionUsuarios, AsignacionesUsuarios } from "@/features/usuarios"
 import { can } from "@/lib/permissions"
 
 // import { useEffect } from "react"
@@ -45,6 +45,8 @@ function AppContent() {
         return !can(user.role, "categorias", "editar")
       case "gestion-usuarios":
         return !can(user.role, "usuarios", "ver")
+      case "asignaciones-usuarios":
+        return !can(user.role, "usuarios", "ver")
       default:
         return false
     }
@@ -59,9 +61,17 @@ function AppContent() {
 
     switch (currentPage) {
       case "clientes":
+        if (user.role === "field") {
+          return (
+            <ClientesAsignadosField
+              onBack={backToDashboard}
+              onSelectCliente={selectCliente}
+            />
+          )
+        }
         return (
           <ClientesList
-            onBack={user.role === "field" ? backToDashboard : undefined}
+            onBack={undefined}
             onSelectCliente={selectCliente}
           />
         )
@@ -120,6 +130,8 @@ function AppContent() {
         )
       case "gestion-usuarios":
         return <GestionUsuarios />
+      case "asignaciones-usuarios":
+        return <AsignacionesUsuarios />
       default:
         // Página "dashboard" — renderizar según el rol
         return user.role === "field" ? (

@@ -38,6 +38,26 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
 
   if (!res.ok) {
     const errorBody = await res.text().catch(() => "")
+
+    const bodyLower = errorBody.toLowerCase()
+    const isTokenInvalid =
+      bodyLower.includes("token inválido") || bodyLower.includes("token invalido")
+
+    if (isTokenInvalid && (res.status === 400 || res.status === 401 || res.status === 403)) {
+      const error: any = new Error(errorBody || res.statusText)
+      error.code = "TOKEN_INVALID"
+
+      if (typeof window !== "undefined") {
+        try {
+          window.dispatchEvent(new CustomEvent("auth:token-invalid"))
+        } catch {
+          // Ignorar errores al despachar el evento en entornos sin window
+        }
+      }
+
+      throw error
+    }
+
     throw new Error(errorBody || res.statusText)
   }
 

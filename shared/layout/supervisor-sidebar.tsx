@@ -49,6 +49,7 @@ const menuItems = [
     title: "Administracion",
     items: [
       { id: "gestion-usuarios", label: "Usuarios", icon: UserCog },
+      { id: "asignaciones-usuarios", label: "Asignar Clientes", icon: Users },
       { id: "mantenimiento-clientes", label: "Clientes", icon: Building2 },
       { id: "mantenimiento-productos", label: "Productos", icon: Package },
       { id: "mantenimiento-categorias", label: "Categorias", icon: Tag },

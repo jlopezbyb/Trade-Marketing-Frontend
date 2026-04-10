@@ -14,6 +14,8 @@ import {
   InteractionStatus,
   type AuthenticationResult,
 } from "@azure/msal-browser"
+import { toast } from "sonner"
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import type { User, UserRole } from "./types"
 import { mockUsers } from "./mock-data"
 import { getMsalInstance, isMsalConfigured, loginRequest, msalRedirectResult } from "./msal-config"
@@ -68,6 +70,36 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+type SessionWarningReason = "idle" | "token"
+
+interface SessionWarningState {
+  reason: SessionWarningReason
+}
+
+// Valores por defecto (en milisegundos / segundos)
+const DEFAULT_IDLE_TIMEOUT_MS = 60_000
+const DEFAULT_EXPIRY_WARNING_MS = 60_000
+const DEFAULT_SESSION_COUNTDOWN_SECONDS = 30
+
+// Permite parametrizar tiempos desde variables de entorno NEXT_PUBLIC_...
+const IDLE_TIMEOUT_MS = (() => {
+  const raw = process.env.NEXT_PUBLIC_SESSION_IDLE_TIMEOUT_MS
+  const parsed = raw ? Number(raw) : NaN
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_IDLE_TIMEOUT_MS
+})()
+
+const EXPIRY_WARNING_MS = (() => {
+  const raw = process.env.NEXT_PUBLIC_SESSION_EXPIRY_WARNING_MS
+  const parsed = raw ? Number(raw) : NaN
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_EXPIRY_WARNING_MS
+})()
+
+const SESSION_COUNTDOWN_SECONDS = (() => {
+  const raw = process.env.NEXT_PUBLIC_SESSION_COUNTDOWN_SECONDS
+  const parsed = raw ? Number(raw) : NaN
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_SESSION_COUNTDOWN_SECONDS
+})()
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -116,53 +148,150 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [msalReady, setMsalReady] = useState(false)
   const [isRestoring, setIsRestoring] = useState(true)
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [sessionWarning, setSessionWarning] = useState<SessionWarningState | null>(null)
+  const [countdown, setCountdown] = useState<number>(0)
 
   const msalEnabled = isMsalConfigured()
+  const hasProcessedRedirectRef = useRef(false)
 
-  // ---- Programar refresh automático del token del backend ----
-  const scheduleRefresh = useCallback((token: string) => {
+  // ---- Logout centralizado (manual o por timeout) ----
+  const logout = useCallback(() => {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
+    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current)
 
-    const payload = decodeJwtPayload(token)
-    if (!payload?.exp) return
+    refreshTimerRef.current = null
+    idleTimerRef.current = null
+    countdownIntervalRef.current = null
 
-    // Refrescar 60s antes de que expire
-    const expiresInMs = payload.exp * 1000 - Date.now() - 60_000
-    if (expiresInMs <= 0) return
+    setSessionWarning(null)
+    setCountdown(0)
 
-    refreshTimerRef.current = setTimeout(async () => {
-      try {
-        const res = await refreshBackendToken()
-        setBackendToken(res.token)
-        setRefreshToken(res.refreshToken)
-        setAuthToken(res.token)
-        // Guardar nuevos tokens en cookies unificadas
-        const payload = decodeJwtPayload(res.token)
-        if (payload?.exp) {
-          setCookie("token", res.token, new Date(payload.exp * 1000))
-        } else {
-          setCookie("token", res.token)
-        }
-        if (res.refreshToken) {
-          setCookie("refresh_token", res.refreshToken)
-        }
-        scheduleRefresh(res.token)
-      } catch {
-        // Si falla el refresh, cerrar sesión
-        setUser(null)
-        setBackendToken(null)
-        setRefreshToken(null)
-        setAuthToken(null)
-        deleteCookie("token")
-        deleteCookie("refresh_token")
-      }
-    }, expiresInMs)
+    setUser(null)
+    setCurrentUserRole(null)
+    setBackendToken(null)
+    setRefreshToken(null)
+    setAuthToken(null)
+
+    deleteCookie("token")
+    deleteCookie("refresh_token")
+
+    // Intentar cerrar sesion tambien en el backend; ignorar errores en modo mock
+    void logoutBackend().catch(() => {})
   }, [])
 
-  // Limpiar timer al desmontar
+  // ---- Dialogo global de "¿Sigues allí?" ----
+  const openSessionWarning = useCallback(
+    (reason: SessionWarningReason) => {
+      if (!user) return
+      // Si ya hay un aviso mostrado, no volver a reiniciar el contador
+      if (sessionWarning) return
+
+      if (idleTimerRef.current) {
+        clearTimeout(idleTimerRef.current)
+        idleTimerRef.current = null
+      }
+
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current)
+        countdownIntervalRef.current = null
+      }
+
+      setSessionWarning({ reason })
+      setCountdown(SESSION_COUNTDOWN_SECONDS)
+
+      countdownIntervalRef.current = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            if (countdownIntervalRef.current) {
+              clearInterval(countdownIntervalRef.current)
+              countdownIntervalRef.current = null
+            }
+            logout()
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1_000)
+    },
+    [logout, sessionWarning, user]
+  )
+
+  // ---- Programar aviso de expiracion del token del backend ----
+  const scheduleRefresh = useCallback(
+    (token: string) => {
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current)
+        refreshTimerRef.current = null
+      }
+
+      const payload = decodeJwtPayload(token)
+      if (!payload?.exp) return
+
+      // Mostrar aviso EXPIRY_WARNING_MS antes de que expire el token
+      const warningInMs = payload.exp * 1000 - Date.now() - EXPIRY_WARNING_MS
+
+      if (warningInMs <= 0) {
+        openSessionWarning("token")
+        return
+      }
+
+      refreshTimerRef.current = setTimeout(() => {
+        openSessionWarning("token")
+      }, warningInMs)
+    },
+    [openSessionWarning]
+  )
+
+  // ---- Refrescar token de sesion bajo demanda (boton "Si") ----
+  const refreshSessionToken = useCallback(async (): Promise<boolean> => {
+    if (!backendToken) return false
+
+    try {
+      const res = await refreshBackendToken()
+      setBackendToken(res.token)
+      setRefreshToken(res.refreshToken)
+      setAuthToken(res.token)
+
+      const payload = decodeJwtPayload(res.token)
+      if (payload?.exp) {
+        setCookie("token", res.token, new Date(payload.exp * 1000))
+      } else {
+        setCookie("token", res.token)
+      }
+      if (res.refreshToken) {
+        setCookie("refresh_token", res.refreshToken)
+      }
+
+      scheduleRefresh(res.token)
+      return true
+    } catch {
+      logout()
+      return false
+    }
+  }, [backendToken, logout, scheduleRefresh])
+
+  // ---- Timer de inactividad (1 minuto sin interaccion) ----
+  const resetIdleTimer = useCallback(() => {
+    if (idleTimerRef.current) {
+      clearTimeout(idleTimerRef.current)
+      idleTimerRef.current = null
+    }
+    if (!user) return
+
+    idleTimerRef.current = setTimeout(() => {
+      openSessionWarning("idle")
+    }, IDLE_TIMEOUT_MS)
+  }, [openSessionWarning, user])
+
+  // Limpiar timers al desmontar
   useEffect(() => {
     return () => {
       if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
+      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current)
     }
   }, [])
 
@@ -308,6 +437,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Si hay respuesta, es que venimos de un redirect de Microsoft
       if (response) {
+        // Evitar procesar el mismo redirect varias veces (lo que generaría
+        // múltiples llamadas a /auth/login en el backend)
+        if (hasProcessedRedirectRef.current) {
+          return
+        }
+        hasProcessedRedirectRef.current = true
+
         const instance = getMsalInstance()
         instance?.setActiveAccount(response.account)
 
@@ -422,16 +558,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // ---- Logout ----
-  const logout = useCallback(() => {
-    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
-    setUser(null)
-    setCurrentUserRole(null)
-    setBackendToken(null)
-    setRefreshToken(null)
-    setAuthToken(null)
-    // deleteCookie("backendToken") // Ya no se usa, migrado a 'token' y 'refresh_token'
-  }, [])
+  // ---- Escuchar token inválido desde el backend ----
+  useEffect(() => {
+    if (typeof window === "undefined") return
+
+    const handleTokenInvalid = () => {
+      toast.info("Tu sesión ha expirado o el token es inválido. Por favor inicia sesión nuevamente.")
+      logout()
+    }
+
+    window.addEventListener("auth:token-invalid", handleTokenInvalid as EventListener)
+
+    return () => {
+      window.removeEventListener("auth:token-invalid", handleTokenInvalid as EventListener)
+    }
+  }, [logout])
+  // ---- Escuchar actividad del usuario para reiniciar el timer de inactividad ----
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    if (!user) return
+
+    const events: (keyof WindowEventMap)[] = [
+      "click",
+      "keydown",
+      "mousemove",
+      "scroll",
+      "touchstart",
+    ]
+
+    const handleActivity = () => {
+      if (!sessionWarning) {
+        resetIdleTimer()
+      }
+    }
+
+    events.forEach((event) => window.addEventListener(event, handleActivity))
+    resetIdleTimer()
+
+    return () => {
+      events.forEach((event) => window.removeEventListener(event, handleActivity))
+    }
+  }, [resetIdleTimer, sessionWarning, user])
 
   return (
     <AuthContext.Provider
@@ -447,6 +614,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
+
+      <AlertDialog open={!!sessionWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Sigues allí?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {sessionWarning?.reason === "token"
+                ? "Tu sesión está a punto de expirar. Por seguridad, confirma si deseas seguir usando el sistema."
+                : "Detectamos inactividad en la aplicación. Para mantener tu sesión activa, confirma que sigues utilizando el sistema."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
+              <span>La sesión se cerrará automáticamente en</span>
+              <span className="font-mono text-base text-gold">{countdown}s</span>
+            </div>
+            <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full bg-gold transition-[width] duration-1000 ease-linear"
+                style={{
+                  width: `${Math.max(
+                    0,
+                    Math.min(100, (countdown / (SESSION_COUNTDOWN_SECONDS || DEFAULT_SESSION_COUNTDOWN_SECONDS)) * 100)
+                  )}%`,
+                }}
+              />
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={async () => {
+                if (countdownIntervalRef.current) {
+                  clearInterval(countdownIntervalRef.current)
+                  countdownIntervalRef.current = null
+                }
+
+                const reason = sessionWarning?.reason
+                setSessionWarning(null)
+                setCountdown(0)
+
+                if (reason === "token" || reason === "idle") {
+                  // Siempre que sea posible, intenta refrescar el token
+                  await refreshSessionToken()
+                }
+
+                resetIdleTimer()
+              }}
+            >
+              Sí, seguir en la aplicación
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AuthContext.Provider>
   )
 }

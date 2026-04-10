@@ -14,6 +14,7 @@ export type Page =
   | "mantenimiento-clientes"
   | "mantenimiento-categorias"
   | "gestion-usuarios"
+  | "asignaciones-usuarios"
 
 export function useAppRouter() {
   const [currentPage, setCurrentPage] = useState<Page>(() => {
